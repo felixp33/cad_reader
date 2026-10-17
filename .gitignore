@@ -1,0 +1,7 @@
+.DS_Store
+Pack&Go Inventor.zip
+
+# CAD data (large, proprietary) and local viewer data
+Pack&Go Inventor/
+*.zip
+viewer/data/
