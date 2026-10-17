@@ -9,9 +9,9 @@ export type { Entry };
 const matches = (e: Entry, q: string, labelOf: (e: Entry) => string): boolean =>
   !q || labelOf(e).toLowerCase().includes(q) || e.name.toLowerCase().includes(q) || e.children.some((c) => matches(c, q, labelOf));
 
-export default function TreeNode({ entry, depth, filter, selected, onSelect, onIsolate, labelOf }: {
+export default function TreeNode({ entry, depth, filter, selected, onSelect, onIsolate, labelOf, noteCount }: {
   entry: Entry; depth: number; filter: string; selected: Entry | null; onSelect: (e: Entry) => void; onIsolate: (e: Entry) => void;
-  labelOf: (e: Entry) => string;
+  labelOf: (e: Entry) => string; noteCount: (e: Entry) => number;
 }) {
   const [open, setOpen] = useState(depth < 1);
   const [, force] = useState(0);
@@ -26,13 +26,14 @@ export default function TreeNode({ entry, depth, filter, selected, onSelect, onI
           {entry.children.length ? (expanded ? '▾' : '▸') : ''}
         </span>
         <span className="label" title={entry.name}>{labelOf(entry)}</span>
+        {noteCount(entry) > 0 && <span className="note-badge" title={`${noteCount(entry)} knowledge note(s)`}>●{noteCount(entry) > 1 ? noteCount(entry) : ''}</span>}
         <span className="eye iso-btn" title="View isolated" onClick={(e) => { e.stopPropagation(); onIsolate(entry); }}>⧉</span>
         <span className="eye" onClick={(e) => { e.stopPropagation(); entry.group.visible = !visible; force((n) => n + 1); }}>👁</span>
       </div>
       {expanded && entry.children.length > 0 && (
         <div className="children">
           {entry.children.map((c, i) => (
-            <TreeNode key={i} entry={c} depth={depth + 1} filter={filter} selected={selected} onSelect={onSelect} onIsolate={onIsolate} labelOf={labelOf} />
+            <TreeNode key={i} entry={c} depth={depth + 1} filter={filter} selected={selected} onSelect={onSelect} onIsolate={onIsolate} labelOf={labelOf} noteCount={noteCount} />
           ))}
         </div>
       )}

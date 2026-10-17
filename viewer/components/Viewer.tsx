@@ -8,6 +8,7 @@ import { frameObject } from '@/lib/frame';
 import Link from 'next/link';
 import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
+import { useNotes } from '@/lib/useNotes';
 import InfoPanel from './InfoPanel';
 import Toggle from './Toggle';
 import TreeNode from './TreeNode';
@@ -24,6 +25,7 @@ export default function Viewer() {
   const [filter, setFilter] = useState('');
   const [wire, setWire] = useState(false);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
+  const { notes, save: saveNote, remove: removeNote } = useNotes(currentModel);
   const [names, setNames] = useState<Record<string, string>>({});
   const [showGiven, setShowGiven] = useState(true);
   const [isolated, setIsolated] = useState<Entry | null>(null);
@@ -116,6 +118,9 @@ export default function Viewer() {
     three.current.model?.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).wireframe = next; });
   };
 
+  // Number of notes attached directly to a part, for the badge in the tree.
+  const noteCount = (e: Entry) => notes.filter((n) => n.parts.includes(e.name)).length;
+
   const clearSelection = () => {
     selected?.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0); });
     setSelected(null);
@@ -152,7 +157,7 @@ export default function Viewer() {
         <h2>Assembly</h2>
         <input className="filter" placeholder="Filter parts…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <div className="tree">
-          {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} labelOf={labelOf} />}
+          {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} labelOf={labelOf} noteCount={noteCount} />}
         </div>
       </aside>
       <main>
@@ -160,7 +165,7 @@ export default function Viewer() {
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
-      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} onBack={clearSelection} />
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} onBack={clearSelection} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
   );
 }

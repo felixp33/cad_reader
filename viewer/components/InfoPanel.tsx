@@ -2,32 +2,35 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
+import type { Note } from '@/lib/noteTypes';
+import type { NoteInput } from '@/lib/useNotes';
+import KnowledgeNotes from './KnowledgeNotes';
 
-type Info = { title: string; description: string; parts: Record<string, string> };
-type Patch = { model: string; title?: string; description?: string; parts?: Record<string, string> };
-
-// Right-hand column: user-written info for the machine, or for the selected part (autosaved),
-// plus how many main / unique parts have a description.
-export default function InfoPanel({ model, root, mainIds, selected, label, onBack }: {
+// Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
+// selected part, and how many main / unique parts have notes.
+export default function InfoPanel({ model, root, mainIds, selected, label, onBack, notes, onSaveNote, onRemoveNote }: {
   model: string | null;
   root: Entry | null;
   mainIds: string[];
   selected: Entry | null;
   label: (e: Entry) => string;
   onBack: () => void;
+  notes: Note[];
+  onSaveNote: (n: NoteInput) => Promise<void>;
+  onRemoveNote: (id: string) => Promise<void>;
 }) {
-  const [info, setInfo] = useState<Info>({ title: '', description: '', parts: {} });
+  const [title, setTitle] = useState('');
   const [saved, setSaved] = useState(true);
-  const pending = useRef<Patch | null>(null);
+  const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const flush = async () => {
     clearTimeout(timer.current);
-    const p = pending.current;
-    if (!p) return;
+    if (pending.current === null || !model) return;
+    const t = pending.current;
     pending.current = null;
-    await fetch('/api/info', { method: 'PUT', body: JSON.stringify(p) });
-    if (!pending.current) setSaved(true);
+    await fetch('/api/info', { method: 'PUT', body: JSON.stringify({ model, title: t }) });
+    if (pending.current === null) setSaved(true);
   };
 
   // Load on model change (saving anything still pending for the previous one first).
@@ -36,38 +39,37 @@ export default function InfoPanel({ model, root, mainIds, selected, label, onBac
     let cancelled = false;
     flush().then(() => fetch('/api/info?model=' + encodeURIComponent(model)))
       .then((r) => r.json())
-      .then((i: Info) => { if (!cancelled) setInfo(i); });
+      .then((i: { title: string }) => { if (!cancelled) setTitle(i.title); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
   useEffect(() => () => { flush(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const edit = (patch: Omit<Patch, 'model'>) => {
-    if (!model) return;
-    setInfo((i) => ({ ...i, ...patch, parts: { ...i.parts, ...patch.parts } }));
-    pending.current = { ...pending.current, ...patch, parts: { ...pending.current?.parts, ...patch.parts }, model };
+  const editTitle = (value: string) => {
+    setTitle(value);
+    pending.current = value;
     setSaved(false);
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, 600);
   };
 
   // Main parts = first generation; unique parts = distinct meshes (an entry's `proto`), counted once
-  // if any instance of them has a description.
+  // if any instance of them has a note.
   const stats = useMemo(() => {
-    const described = (id: string) => !!info.parts[id]?.trim();
-    const protos = new Set<number>(), describedProtos = new Set<number>();
+    const noted = new Set(notes.flatMap((n) => n.parts));
+    const protos = new Set<number>(), notedProtos = new Set<number>();
     const walk = (e: Entry) => {
-      if (e.proto !== undefined) { protos.add(e.proto); if (described(e.name)) describedProtos.add(e.proto); }
+      if (e.proto !== undefined) { protos.add(e.proto); if (noted.has(e.name)) notedProtos.add(e.proto); }
       e.children.forEach(walk);
     };
     if (root) walk(root);
     return {
       main: mainIds.length,
-      mainDescribed: mainIds.filter(described).length,
+      mainNoted: mainIds.filter((id) => noted.has(id)).length,
       unique: protos.size,
-      uniqueDescribed: describedProtos.size,
+      uniqueNoted: notedProtos.size,
     };
-  }, [root, mainIds, info.parts]);
+  }, [root, mainIds, notes]);
 
   if (!model) return <aside className="info"><h2>Information</h2><div className="info-empty">Load a model to see its information.</div></aside>;
 
@@ -77,34 +79,21 @@ export default function InfoPanel({ model, root, mainIds, selected, label, onBac
       <div className="info-body">
         {selected ? (
           <>
-            <button className="info-back" onClick={onBack}>← Machine info</button>
+            <button className="info-back" onClick={onBack}>← Machine</button>
             <div className="info-part">
               <strong>{label(selected)}</strong>
               <code>{selected.name}</code>
             </div>
-            <label>Description
-              <textarea
-                key={selected.name}
-                value={info.parts[selected.name] ?? ''}
-                placeholder="Describe this part…"
-                rows={10}
-                onChange={(e) => edit({ parts: { [selected.name]: e.target.value } })}
-              />
-            </label>
           </>
         ) : (
-          <>
-            <label>Name
-              <input value={info.title} placeholder="Machine name" onChange={(e) => edit({ title: e.target.value })} />
-            </label>
-            <label>Description
-              <textarea value={info.description} placeholder="Describe this machine…" rows={10} onChange={(e) => edit({ description: e.target.value })} />
-            </label>
-          </>
+          <label>Name
+            <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
+          </label>
         )}
+        <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} onSave={onSaveNote} onRemove={onRemoveNote} />
         <dl className="facts">
-          <dt>Main parts</dt><dd>{stats.mainDescribed} / {stats.main} described</dd>
-          <dt>Unique parts</dt><dd>{stats.uniqueDescribed} / {stats.unique} described</dd>
+          <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
+          <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
         </dl>
       </div>
     </aside>
