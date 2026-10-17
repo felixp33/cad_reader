@@ -29,7 +29,38 @@ canvas { display:block; width:100%; height:100%; }
 .iso-head { cursor:grab; touch-action:none; user-select:none; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 8px; border-bottom:1px solid var(--line); }
 .iso-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .iso-head button { padding:0 6px; }
-.iso canvas { flex:1; min-height:0; }
+.iso-body { flex:1; min-height:0; }
 .iso-resize { position:absolute; right:0; bottom:0; width:16px; height:16px; cursor:nwse-resize; touch-action:none; opacity:.8;
               background:linear-gradient(135deg, transparent 50%, var(--dim) 50%, var(--dim) 58%, transparent 58%, transparent 72%, var(--dim) 72%, var(--dim) 80%, transparent 80%); }
 .iso-actions { display:flex; gap:4px; flex:none; }
+.btn { background:#252b34; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:5px 8px; text-decoration:none; }
+.btn:hover { border-color:var(--accent); }
+
+/* naming page */
+.naming { height:100vh; display:flex; flex-direction:column; }
+.naming-head { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); border-bottom:1px solid var(--line); }
+.naming-head h1 { margin:0; font-size:15px; font-weight:600; }
+.naming-head select { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:4px 8px; font:inherit; }
+.naming-progress { margin-left:auto; color:var(--dim); }
+.naming-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); }
+.naming-body { flex:1; min-height:0; display:grid; grid-template-columns:280px 1fr; }
+.naming-list { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:6px; }
+.naming-item { display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:5px; cursor:pointer; }
+.naming-item:hover { background:#252b34; }
+.naming-item.sel { background:#1f3a58; }
+.naming-check { width:14px; color:var(--dim); }
+.naming-item .naming-check:first-child { flex:none; }
+.naming-item-text { display:flex; flex-direction:column; min-width:0; }
+.naming-item-text small { color:var(--dim); overflow:hidden; text-overflow:ellipsis; }
+.naming-main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+.naming-view { position:relative; flex:1; min-height:0; background:#1a1e25; }
+.naming-reset { position:absolute; top:10px; right:10px; padding:0 8px; }
+.naming-count { position:absolute; left:12px; bottom:10px; color:var(--dim); }
+.naming-form { padding:14px 20px 18px; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+.naming-id { color:var(--dim); }
+.naming-id code { color:var(--fg); }
+.naming-form input { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:inherit; font-size:16px; }
+.naming-form input:focus { outline:none; border-color:var(--accent); }
+.naming-actions { display:flex; gap:8px; }
+.naming-actions .primary { margin-left:auto; background:var(--accent); color:#06121f; border-color:var(--accent); font-weight:600; }
+button:disabled { opacity:.4; cursor:default; }

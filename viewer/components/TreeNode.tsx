@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type * as THREE from 'three';
+import type { Entry } from '@/lib/scene';
 
-export type Entry = { name: string; group: THREE.Group; children: Entry[] };
+export type { Entry };
 
 // True if this entry or any descendant matches the filter.
 const matches = (e: Entry, q: string): boolean => !q || e.name.toLowerCase().includes(q) || e.children.some((c) => matches(c, q));
