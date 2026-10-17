@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 
 // The viewer lives in <project>/viewer; models are searched in the project root.
@@ -27,4 +28,9 @@ export function resolveModel(rel: string): string | null {
   const file = path.resolve(PROJECT_DIR, rel);
   if (!file.startsWith(PROJECT_DIR + path.sep) || !MODEL_EXTS.has(path.extname(file).toLowerCase())) return null;
   return fs.existsSync(file) ? file : null;
+}
+
+// Cache directory id for a model: changes when the file is modified.
+export function cacheId(file: string): string {
+  return crypto.createHash('sha1').update(`${file}:${fs.statSync(file).mtimeMs}`).digest('hex').slice(0, 16);
 }

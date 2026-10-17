@@ -1,5 +1,5 @@
-import Viewer from '@/components/Viewer';
+import Library from '@/components/Library';
 
 export default function Page() {
-  return <Viewer />;
+  return <Library />;
 }

@@ -7,7 +7,7 @@ import PartCanvas from './PartCanvas';
 const MIN_W = 260, MIN_H = 200, MAX_W = 900, MAX_H = 800;
 
 // Small overlay with its own renderer showing a single part/sub-assembly on its own.
-export default function IsolatedView({ entry, onClose }: { entry: Entry; onClose: () => void }) {
+export default function IsolatedView({ entry, title, onClose }: { entry: Entry; title?: string; onClose: () => void }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 380, h: 320 });
   const resetRef = useRef<() => void>(() => {});
@@ -51,7 +51,7 @@ export default function IsolatedView({ entry, onClose }: { entry: Entry; onClose
   return (
     <div className="iso" style={{ width: size.w, height: size.h, left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden' }}>
       <div className="iso-head" onPointerDown={startMove}>
-        <span className="iso-title">{entry.name}</span>
+        <span className="iso-title">{title ?? entry.name}</span>
         <span className="iso-actions">
           <button onClick={() => resetRef.current()} title="Recenter and fit (double-click also recenters)">⌖</button>
           <button onClick={onClose}>✕</button>

@@ -19,6 +19,9 @@ export default function Viewer() {
   const [status, setStatus] = useState('Pick a model to load.');
   const [filter, setFilter] = useState('');
   const [wire, setWire] = useState(false);
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [showGiven, setShowGiven] = useState(true);
   const [isolated, setIsolated] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +75,8 @@ export default function Viewer() {
     setLoading(true);
     try {
       const { name, model, holder, roots } = await fetchScene(path, setStatus);
+      setCurrentModel(path);
+      setNames(await fetch('/api/names?model=' + encodeURIComponent(path)).then((r) => r.json()).catch(() => ({})));
       const t = three.current;
       if (t.model) t.scene.remove(t.model);
       t.scene.add(holder);
@@ -89,6 +94,13 @@ export default function Viewer() {
     }
   };
 
+  // Open straight into a model when linked from the library (/viewer?model=...).
+  useEffect(() => {
+    const m = new URLSearchParams(location.search).get('model');
+    if (m) loadModel(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const select = (entry: Entry) => {
     selected?.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0); });
     entry.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0x1a4a80); });
@@ -96,7 +108,7 @@ export default function Viewer() {
     const box = new THREE.Box3().setFromObject(entry.group);
     if (!box.isEmpty()) {
       const s = box.getSize(new THREE.Vector3());
-      setStatus(`${entry.name} — ${s.x.toFixed(1)} × ${s.y.toFixed(1)} × ${s.z.toFixed(1)}`);
+      setStatus(`${labelOf(entry)} — ${s.x.toFixed(1)} × ${s.y.toFixed(1)} × ${s.z.toFixed(1)}`);
     }
   };
 
@@ -106,11 +118,8 @@ export default function Viewer() {
     three.current.model?.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).wireframe = next; });
   };
 
-  const showAll = () => {
-    const walk = (e: Entry) => { e.group.visible = true; e.children.forEach(walk); };
-    if (root) walk(root);
-    setRoot({ ...root! }); // force re-render of the tree
-  };
+  // Given (human-readable) name if there is one and the toggle is on, otherwise the part's ID.
+  const labelOf = (e: Entry) => (showGiven && names[e.name]) || e.name;
 
   return (
     <div className="app">
@@ -127,18 +136,21 @@ export default function Viewer() {
         <h2>Assembly</h2>
         <input className="filter" placeholder="Filter parts…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <div className="tree">
-          {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} />}
+          {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} labelOf={labelOf} />}
         </div>
       </aside>
       <main>
         <canvas ref={canvasRef} />
         <div className="toolbar">
-          <Link className="btn" href="/naming">Name parts →</Link>
+          <Link className="btn" href="/">← Library</Link>
+          <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts →</Link>
           <button onClick={fit}>Fit</button>
           <button onClick={toggleWire}>Wireframe</button>
-          <button onClick={showAll}>Show all</button>
+          <button onClick={() => setShowGiven(!showGiven)} title="Switch the assembly tree between given names and part IDs">
+            Names: {showGiven ? 'given' : 'IDs'}
+          </button>
         </div>
-        {isolated && <IsolatedView entry={isolated} onClose={() => setIsolated(null)} />}
+        {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
     </div>

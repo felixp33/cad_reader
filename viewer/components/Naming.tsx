@@ -29,7 +29,9 @@ export default function Naming() {
   useEffect(() => {
     fetch('/api/models').then((r) => r.json()).then((m: ModelFile[]) => {
       setModels(m);
-      if (m.length) setModelPath(m[0].path); else setStatus('No .stp/.step files found.');
+      const wanted = new URLSearchParams(location.search).get('model');
+      const initial = m.find((f) => f.path === wanted) ?? m[0];
+      if (initial) setModelPath(initial.path); else setStatus('No .stp/.step files found.');
     });
   }, []);
 
@@ -67,31 +69,48 @@ export default function Naming() {
 
   const named = useMemo(() => parts.filter((p) => names[p.name]).length, [parts, names]);
 
-  const save = async (name: string) => {
+  // Autosave: edits are written shortly after typing stops, and immediately when leaving a part.
+  const pending = useRef<{ model: string; id: string; name: string } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [saved, setSaved] = useState(true);
+
+  const flush = async () => {
+    clearTimeout(timer.current);
+    const p = pending.current;
+    if (!p) return;
+    pending.current = null;
+    await fetch('/api/names', { method: 'PUT', body: JSON.stringify(p) });
+    if (!pending.current) setSaved(true);
+  };
+  useEffect(() => () => { flush(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const edit = (value: string) => {
     if (!current || !modelPath) return;
-    const trimmed = name.trim();
+    setDraft(value);
+    const trimmed = value.trim();
     setNames((n) => {
       const next = { ...n };
       if (trimmed) next[current.name] = trimmed; else delete next[current.name];
       return next;
     });
-    await fetch('/api/names', { method: 'PUT', body: JSON.stringify({ model: modelPath, id: current.name, name: trimmed }) });
+    pending.current = { model: modelPath, id: current.name, name: trimmed };
+    setSaved(false);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(flush, 500);
   };
 
-  const go = (i: number) => setIndex(Math.min(parts.length - 1, Math.max(0, i)));
-
-  const saveAndNext = async () => {
-    await save(draft);
-    go(index + 1);
+  const go = async (i: number) => {
+    await flush();
+    setIndex(Math.min(parts.length - 1, Math.max(0, i)));
   };
 
   return (
     <div className="naming">
       <header className="naming-head">
-        <Link className="btn" href="/">← Viewer</Link>
+        <Link className="btn" href="/">← Library</Link>
         <h1>Name parts</h1>
         {models.length > 1 && (
-          <select value={modelPath ?? ''} onChange={(e) => setModelPath(e.target.value)}>
+          <select value={modelPath ?? ''} onChange={(e) => { flush(); setModelPath(e.target.value); }}>
             {models.map((m) => <option key={m.path} value={m.path}>{m.path.split('/').pop()}</option>)}
           </select>
         )}
@@ -117,6 +136,8 @@ export default function Naming() {
             <div className="naming-view">
               <PartCanvas entry={current!} resetRef={resetRef} />
               <button className="naming-reset" onClick={() => resetRef.current()} title="Recenter">⌖</button>
+              <button className="naming-arrow left" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous part">←</button>
+              <button className="naming-arrow right" onClick={() => go(index + 1)} disabled={index === parts.length - 1} aria-label="Next part">→</button>
               <div className="naming-count">{index + 1} / {parts.length}</div>
             </div>
             <div className="naming-form">
@@ -125,14 +146,9 @@ export default function Naming() {
                 ref={inputRef}
                 value={draft}
                 placeholder="What is this part called?"
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') saveAndNext(); }}
+                onChange={(e) => edit(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && index < parts.length - 1) go(index + 1); }}
               />
-              <div className="naming-actions">
-                <button onClick={() => go(index - 1)} disabled={index === 0}>← Previous</button>
-                <button onClick={() => go(index + 1)} disabled={index === parts.length - 1}>Skip →</button>
-                <button className="primary" onClick={saveAndNext}>Save &amp; next ↵</button>
-              </div>
             </div>
           </section>
         </div>

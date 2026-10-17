@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { frameObject } from '@/lib/frame';
 import type { Entry } from '@/lib/scene';
 
 // A canvas with its own renderer showing a single part/sub-assembly on its own.
@@ -33,27 +34,24 @@ export default function PartCanvas({ entry, resetRef }: { entry: Entry; resetRef
     holder.add(clone);
     scene.add(holder);
 
-    holder.updateMatrixWorld(true); // world matrices are stale until the first render
-    const box = new THREE.Box3().setFromObject(holder);
-    const diag = Math.max(box.getSize(new THREE.Vector3()).length(), 1e-3);
-    const center = box.getCenter(new THREE.Vector3());
-    camera.near = diag / 1000;
-    camera.far = diag * 20;
-    camera.updateProjectionMatrix();
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.zoomToCursor = true; // wheel zooms towards the pointer
-    controls.minDistance = diag * 0.02;
-    controls.maxDistance = diag * 10;
 
-    // Frame the whole part again.
+    // Frame the whole part again, for the canvas' current aspect ratio.
     const reset = () => {
-      camera.position.copy(center).add(new THREE.Vector3(1, 0.8, 1.2).normalize().multiplyScalar(diag * 1.2));
+      const aspect = canvas.clientWidth && canvas.clientHeight ? canvas.clientWidth / canvas.clientHeight : camera.aspect;
+      const { center, radius } = frameObject(camera, holder, aspect);
       controls.target.copy(center);
+      controls.minDistance = radius * 0.05;
+      controls.maxDistance = radius * 20;
       controls.update();
     };
     reset();
     if (resetRef) resetRef.current = reset;
+    // Until the user moves the camera, keep the part framed as the layout settles / the canvas resizes.
+    let interacted = false;
+    controls.addEventListener('start', () => { interacted = true; });
 
     // Double-click recenters the orbit on the clicked point (or re-frames the part if nothing is hit).
     const ray = new THREE.Raycaster();
@@ -70,6 +68,7 @@ export default function PartCanvas({ entry, resetRef }: { entry: Entry; resetRef
       renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
+      if (!interacted) reset();
     });
     ro.observe(canvas);
 
