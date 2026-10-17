@@ -1,18 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+import { createControls } from '@/lib/controls';
+import { frameObject } from '@/lib/frame';
 import Link from 'next/link';
-import { fetchScene, type Entry } from '@/lib/scene';
+import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
+import InfoPanel from './InfoPanel';
+import Toggle from './Toggle';
 import TreeNode from './TreeNode';
 
 type ModelFile = { path: string; size: number };
 
 export default function Viewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const three = useRef<{ scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls; model: THREE.Group | null }>(null!);
+  const three = useRef<{ scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: TrackballControls; canvas: HTMLCanvasElement; model: THREE.Group | null }>(null!);
   const [models, setModels] = useState<ModelFile[]>([]);
   const [root, setRoot] = useState<Entry | null>(null);
   const [selected, setSelected] = useState<Entry | null>(null);
@@ -32,42 +36,37 @@ export default function Viewer() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x14171c);
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1e6);
-    const controls = new OrbitControls(camera, canvas);
-    controls.enableDamping = true;
+    const { controls, dispose: disposeControls } = createControls(camera, canvas);
     scene.add(new THREE.HemisphereLight(0xffffff, 0x404858, 1.1));
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(1, 1, 2);
     camera.add(sun);
     scene.add(camera);
-    three.current = { scene, camera, controls, model: null };
+    three.current = { scene, camera, controls, canvas, model: null };
 
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = canvas.parentElement!;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      controls.handleResize();
     };
     resize();
     addEventListener('resize', resize);
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 
     fetch('/api/models').then((r) => r.json()).then(setModels);
-    return () => { removeEventListener('resize', resize); renderer.setAnimationLoop(null); renderer.dispose(); };
+    return () => { removeEventListener('resize', resize); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
   }, []);
 
   const fit = useCallback(() => {
-    const { model, camera, controls } = three.current;
+    const { model, camera, controls, canvas } = three.current;
     if (!model) return;
-    model.updateMatrixWorld(true); // world matrices are stale until the first render
-    const box = new THREE.Box3().setFromObject(model);
-    if (box.isEmpty()) return;
-    const size = box.getSize(new THREE.Vector3()).length();
-    const center = box.getCenter(new THREE.Vector3());
-    camera.near = size / 1000;
-    camera.far = size * 20;
-    camera.updateProjectionMatrix();
-    camera.position.copy(center).add(new THREE.Vector3(1, 0.8, 1.2).normalize().multiplyScalar(size * 1.1));
+    camera.up.set(0, 1, 0); // undo any roll from free rotation
+    const { center, radius } = frameObject(camera, model, canvas.clientWidth / canvas.clientHeight);
     controls.target.copy(center);
+    controls.minDistance = radius * 0.05;
+    controls.maxDistance = radius * 20;
     controls.update();
   }, []);
 
@@ -112,11 +111,17 @@ export default function Viewer() {
     }
   };
 
-  const toggleWire = () => {
-    const next = !wire;
+  const setWireframe = (next: boolean) => {
     setWire(next);
     three.current.model?.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).wireframe = next; });
   };
+
+  const clearSelection = () => {
+    selected?.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0); });
+    setSelected(null);
+  };
+
+  const mainIds = useMemo(() => (root ? firstGeneration([root]).map((e) => e.name) : []), [root]);
 
   // Given (human-readable) name if there is one and the toggle is on, otherwise the part's ID.
   const labelOf = (e: Entry) => (showGiven && names[e.name]) || e.name;
@@ -131,10 +136,8 @@ export default function Viewer() {
         </Link>
         <span className="topbar-spacer" />
         <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts →</Link>
-        <button onClick={toggleWire}>Wireframe</button>
-        <button onClick={() => setShowGiven(!showGiven)} title="Switch the assembly tree between given names and part IDs">
-          Names: {showGiven ? 'given' : 'IDs'}
-        </button>
+        <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
+        <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
       </header>
       <aside>
         <h2>Project models</h2>
@@ -157,6 +160,7 @@ export default function Viewer() {
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} onBack={clearSelection} />
     </div>
   );
 }

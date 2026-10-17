@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
 import PartCanvas from './PartCanvas';
+import Toggle from './Toggle';
 
 const MIN_W = 260, MIN_H = 200, MAX_W = 900, MAX_H = 800;
 
@@ -11,6 +12,7 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
   const bodyRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 380, h: 320 });
   const resetRef = useRef<() => void>(() => {});
+  const [wireframe, setWireframe] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   const host = () => bodyRef.current!.closest('main')!;
@@ -33,19 +35,28 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
   };
 
   const startMove = (e: React.PointerEvent) => {
-    if (!pos || (e.target as HTMLElement).closest('button')) return;
+    if (!pos || (e.target as HTMLElement).closest('button, .toggle')) return;
     const { x, y } = pos;
     const { clientWidth: hw, clientHeight: hh } = host();
     drag(e, (dx, dy) => setPos({ x: clamp(x + dx, 0, hw - size.w), y: clamp(y + dy, 0, hh - size.h) }));
   };
 
-  // Grows right/down from the fixed top-left corner, up to the limits or the edge of the 3D area.
-  const startResize = (e: React.PointerEvent) => {
+  // Resize from any edge or corner. Dragging the left/top edge also moves the window so the opposite edge stays put.
+  const startResize = (edge: string) => (e: React.PointerEvent) => {
     if (!pos) return;
+    e.stopPropagation();
+    const { x, y } = pos;
     const { w, h } = size;
     const { clientWidth: hw, clientHeight: hh } = host();
-    const maxW = Math.min(MAX_W, hw - pos.x), maxH = Math.min(MAX_H, hh - pos.y);
-    drag(e, (dx, dy) => setSize({ w: clamp(w + dx, MIN_W, maxW), h: clamp(h + dy, MIN_H, maxH) }));
+    drag(e, (dx, dy) => {
+      let nx = x, ny = y, nw = w, nh = h;
+      if (edge.includes('e')) nw = clamp(w + dx, MIN_W, Math.min(MAX_W, hw - x));
+      if (edge.includes('w')) { nw = clamp(w - dx, MIN_W, Math.min(MAX_W, x + w)); nx = x + w - nw; }
+      if (edge.includes('s')) nh = clamp(h + dy, MIN_H, Math.min(MAX_H, hh - y));
+      if (edge.includes('n')) { nh = clamp(h - dy, MIN_H, Math.min(MAX_H, y + h)); ny = y + h - nh; }
+      setSize({ w: nw, h: nh });
+      setPos({ x: nx, y: ny });
+    });
   };
 
   return (
@@ -53,12 +64,15 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
       <div className="iso-head" onPointerDown={startMove}>
         <span className="iso-title">{title ?? entry.name}</span>
         <span className="iso-actions">
+          <Toggle label="Wireframe" checked={wireframe} onChange={setWireframe} />
           <button onClick={() => resetRef.current()} title="Recenter and fit (double-click also recenters)">⌖</button>
           <button onClick={onClose}>✕</button>
         </span>
       </div>
-      <div className="iso-body" ref={bodyRef}><PartCanvas entry={entry} resetRef={resetRef} /></div>
-      <div className="iso-resize" onPointerDown={startResize} title="Drag to resize" />
+      <div className="iso-body" ref={bodyRef}><PartCanvas entry={entry} resetRef={resetRef} wireframe={wireframe} /></div>
+      {['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((edge) => (
+        <div key={edge} className={`iso-h iso-h-${edge}`} onPointerDown={startResize(edge)} />
+      ))}
     </div>
   );
 }

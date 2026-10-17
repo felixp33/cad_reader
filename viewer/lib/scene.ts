@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { loadMesh, type MeshModel, type MeshNode } from './mesh';
 
-export type Entry = { name: string; group: THREE.Group; children: Entry[] };
+export type Entry = { name: string; group: THREE.Group; children: Entry[]; proto?: number };
 
 // Builds the three.js hierarchy and a parallel tree of entries for the sidebar.
 // Parts are meshed once; instances share geometry but get their own material (for highlighting).
@@ -25,7 +25,7 @@ export function buildEntry(node: MeshNode, model: MeshModel, bin: ArrayBuffer, g
     });
   }
   parent.add(group);
-  return { name: node.name || '(unnamed)', group, children: (node.children ?? []).map((c) => buildEntry(c, model, bin, geoms, group)) };
+  return { name: node.name || '(unnamed)', group, proto: node.proto, children: (node.children ?? []).map((c) => buildEntry(c, model, bin, geoms, group)) };
 }
 
 // Converts (cached) and loads a STEP file into a three.js group plus its entry tree.
@@ -42,4 +42,12 @@ export async function fetchScene(path: string, onStatus: (s: string) => void = (
   holder.rotation.x = -Math.PI / 2;
   const roots = model.roots.map((r) => buildEntry(r, model, bin, new Map(), holder));
   return { name, model, holder, roots };
+}
+
+// The machine is the first node that branches; its children are the parts to name.
+// (STEP files often wrap the machine in single-child container nodes.)
+export function firstGeneration(roots: Entry[]): Entry[] {
+  let level = roots;
+  while (level.length === 1 && level[0].children.length > 0) level = level[0].children;
+  return level;
 }

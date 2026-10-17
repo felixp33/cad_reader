@@ -2,14 +2,19 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
 import type { Entry } from '@/lib/scene';
 
 // A canvas with its own renderer showing a single part/sub-assembly on its own.
 // Wheel zooms to the cursor, double-click recenters; `resetRef` re-frames the whole part.
-export default function PartCanvas({ entry, resetRef }: { entry: Entry; resetRef?: React.MutableRefObject<() => void> }) {
+export default function PartCanvas({ entry, resetRef, wireframe = false }: {
+  entry: Entry; resetRef?: React.MutableRefObject<() => void>; wireframe?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const materials = useRef<THREE.Material[]>([]);
+  const wireRef = useRef(wireframe);
+  wireRef.current = wireframe;
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -29,18 +34,24 @@ export default function PartCanvas({ entry, resetRef }: { entry: Entry; resetRef
     const clone = entry.group.clone(true);
     clone.visible = true;
     clone.matrix.identity();
+    // Own materials, so wireframe here doesn't change the main view (clone() shares them).
+    const mats: THREE.Material[] = [];
+    clone.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) { m.material = (m.material as THREE.Material).clone(); (m.material as THREE.MeshStandardMaterial).wireframe = wireRef.current; mats.push(m.material); }
+    });
+    materials.current = mats;
     const holder = new THREE.Group();
     holder.rotation.x = -Math.PI / 2; // STEP is Z-up
     holder.add(clone);
     scene.add(holder);
 
-    const controls = new OrbitControls(camera, canvas);
-    controls.enableDamping = true;
-    controls.zoomToCursor = true; // wheel zooms towards the pointer
+    const { controls, dispose: disposeControls } = createControls(camera, canvas);
 
     // Frame the whole part again, for the canvas' current aspect ratio.
     const reset = () => {
       const aspect = canvas.clientWidth && canvas.clientHeight ? canvas.clientWidth / canvas.clientHeight : camera.aspect;
+      camera.up.set(0, 1, 0); // undo any roll from free rotation
       const { center, radius } = frameObject(camera, holder, aspect);
       controls.target.copy(center);
       controls.minDistance = radius * 0.05;
@@ -68,13 +79,18 @@ export default function PartCanvas({ entry, resetRef }: { entry: Entry; resetRef
       renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
       camera.aspect = canvas.clientWidth / canvas.clientHeight;
       camera.updateProjectionMatrix();
+      controls.handleResize();
       if (!interacted) reset();
     });
     ro.observe(canvas);
 
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-    return () => { canvas.removeEventListener('dblclick', onDouble); ro.disconnect(); renderer.setAnimationLoop(null); controls.dispose(); renderer.dispose(); };
+    return () => { mats.forEach((m) => m.dispose()); canvas.removeEventListener('dblclick', onDouble); ro.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
   }, [entry, resetRef]);
+
+  useEffect(() => {
+    materials.current.forEach((m) => { (m as THREE.MeshStandardMaterial).wireframe = wireframe; });
+  }, [wireframe]);
 
   return <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />;
 }

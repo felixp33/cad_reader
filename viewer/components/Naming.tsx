@@ -2,18 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchScene, type Entry } from '@/lib/scene';
+import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
 import PartCanvas from './PartCanvas';
 
 type ModelFile = { path: string; size: number };
-
-// The machine is the first node that branches; its children are the parts to name.
-// (STEP files often wrap the machine in single-child container nodes.)
-function firstGeneration(roots: Entry[]): Entry[] {
-  let level = roots;
-  while (level.length === 1 && level[0].children.length > 0) level = level[0].children;
-  return level;
-}
 
 export default function Naming() {
   const [models, setModels] = useState<ModelFile[]>([]);
