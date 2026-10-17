@@ -123,6 +123,19 @@ export default function Viewer() {
 
   return (
     <div className="app">
+      <header className="topbar">
+        <Link className="btn icon-btn" href="/" title="Library" aria-label="Library">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h5v-6h4v6h5V10" />
+          </svg>
+        </Link>
+        <span className="topbar-spacer" />
+        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts →</Link>
+        <button onClick={toggleWire}>Wireframe</button>
+        <button onClick={() => setShowGiven(!showGiven)} title="Switch the assembly tree between given names and part IDs">
+          Names: {showGiven ? 'given' : 'IDs'}
+        </button>
+      </header>
       <aside>
         <h2>Project models</h2>
         <div className="models">
@@ -141,15 +154,6 @@ export default function Viewer() {
       </aside>
       <main>
         <canvas ref={canvasRef} />
-        <div className="toolbar">
-          <Link className="btn" href="/">← Library</Link>
-          <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts →</Link>
-          <button onClick={fit}>Fit</button>
-          <button onClick={toggleWire}>Wireframe</button>
-          <button onClick={() => setShowGiven(!showGiven)} title="Switch the assembly tree between given names and part IDs">
-            Names: {showGiven ? 'given' : 'IDs'}
-          </button>
-        </div>
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
