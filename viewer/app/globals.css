@@ -141,3 +141,10 @@ button:disabled { opacity:.4; cursor:default; }
 .kn-from { font-size:11px; color:var(--dim); }
 .kn-foot { display:flex; justify-content:space-between; align-items:center; } .kn-foot small { color:var(--dim); }
 .kn-foot button { padding:0 6px; margin-left:4px; font-size:11px; }
+
+/* selection path over the 3D view */
+.crumbs { position:absolute; top:10px; left:12px; right:12px; display:flex; flex-wrap:wrap; align-items:center; gap:2px; pointer-events:none; }
+.crumb-wrap { display:inline-flex; align-items:center; gap:2px; pointer-events:auto; max-width:100%; }
+.crumb-sep { color:var(--dim); }
+.crumb { background:rgba(28,32,39,.85); padding:2px 8px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.crumb.current { border-color:var(--accent); }

@@ -72,8 +72,6 @@ export default function KnowledgeNotes({ notes, root, selected, label, onSave, o
         key={editing?.id ?? `new-${target}`}
         target={target}
         initial={editing}
-        byId={byId}
-        partLabel={partLabel}
         onSave={async (n) => { await onSave(n); setEditing(null); }}
         onCancel={editing ? () => setEditing(null) : undefined}
       />
@@ -84,31 +82,17 @@ export default function KnowledgeNotes({ notes, root, selected, label, onSave, o
   );
 }
 
-function NoteForm({ target, initial, byId, partLabel, onSave, onCancel }: {
-  target: string; initial: Note | null; byId: Map<string, Entry>; partLabel: (id: string) => string;
+function NoteForm({ target, initial, onSave, onCancel }: {
+  target: string; initial: Note | null;
   onSave: (n: NoteInput) => Promise<void>; onCancel?: () => void;
 }) {
   const [text, setText] = useState(initial?.text ?? '');
-  const [links, setLinks] = useState<string[]>(initial?.parts ?? [target]);
+  const links = initial?.parts ?? [target]; // a note is about what was selected when it was written
   const [author, setAuthor] = useState('');
   const [busy, setBusy] = useState(false);
-  const [linkText, setLinkText] = useState('');
   const dictation = useDictation((t) => setText((prev) => (prev ? prev + ' ' : '') + t));
 
   useEffect(() => { try { setAuthor(localStorage.getItem('cad.author') ?? ''); } catch { /* no storage */ } }, []);
-
-  // Datalist options: "label · id" -> id
-  const options = useMemo(() => {
-    const m = new Map<string, string>([['Whole machine', MACHINE]]);
-    for (const [id] of byId) m.set(partLabel(id) === id ? id : `${partLabel(id)} · ${id}`, id);
-    return m;
-  }, [byId, partLabel]);
-
-  const addLink = (value: string) => {
-    setLinkText(value);
-    const id = options.get(value);
-    if (id && !links.includes(id)) { setLinks([...links, id]); setLinkText(''); }
-  };
 
   const submit = async () => {
     if (!text.trim() || links.length === 0) return;
@@ -117,7 +101,7 @@ function NoteForm({ target, initial, byId, partLabel, onSave, onCancel }: {
     try {
       try { localStorage.setItem('cad.author', author); } catch { /* no storage */ }
       await onSave({ id: initial?.id, text, parts: links, author });
-      if (!initial) { setText(''); setLinks([target]); }
+      if (!initial) setText('');
     } finally { setBusy(false); }
   };
 
@@ -134,18 +118,6 @@ function NoteForm({ target, initial, byId, partLabel, onSave, onCancel }: {
       {dictation.listening && <div className="kn-live">Listening… {dictation.interim && <em>{dictation.interim}</em>}</div>}
       {dictation.error && <div className="kn-error">{dictation.error}</div>}
       {!dictation.supported && <div className="kn-hint">Dictation needs Chrome or Safari.</div>}
-      <div className="kn-links">
-        <span className="kn-label">About</span>
-        <div className="kn-chips">
-          {links.map((id) => (
-            <span key={id} className="kn-chip">{partLabel(id)}
-              {links.length > 1 && <button onClick={() => setLinks(links.filter((l) => l !== id))} aria-label="Remove link">×</button>}
-            </span>
-          ))}
-        </div>
-        <input list="kn-parts" value={linkText} placeholder="Link another part…" onChange={(e) => addLink(e.target.value)} />
-        <datalist id="kn-parts">{[...options.keys()].map((k) => <option key={k} value={k} />)}</datalist>
-      </div>
       <div className="kn-row">
         <input value={author} placeholder="Your name" onChange={(e) => setAuthor(e.target.value)} />
         {onCancel && <button onClick={onCancel}>Cancel</button>}

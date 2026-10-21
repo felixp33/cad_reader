@@ -8,18 +8,18 @@ import KnowledgeNotes from './KnowledgeNotes';
 
 // Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
 // selected part, and how many main / unique parts have notes.
-export default function InfoPanel({ model, root, mainIds, selected, label, onBack, notes, onSaveNote, onRemoveNote }: {
+export default function InfoPanel({ model, root, mainIds, selected, label, title, onTitleChange, notes, onSaveNote, onRemoveNote }: {
   model: string | null;
   root: Entry | null;
   mainIds: string[];
   selected: Entry | null;
   label: (e: Entry) => string;
-  onBack: () => void;
+  title: string;
+  onTitleChange: (t: string) => void;
   notes: Note[];
   onSaveNote: (n: NoteInput) => Promise<void>;
   onRemoveNote: (id: string) => Promise<void>;
 }) {
-  const [title, setTitle] = useState('');
   const [saved, setSaved] = useState(true);
   const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -39,14 +39,14 @@ export default function InfoPanel({ model, root, mainIds, selected, label, onBac
     let cancelled = false;
     flush().then(() => fetch('/api/info?model=' + encodeURIComponent(model)))
       .then((r) => r.json())
-      .then((i: { title: string }) => { if (!cancelled) setTitle(i.title); });
+      .then((i: { title: string }) => { if (!cancelled) onTitleChange(i.title); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
   useEffect(() => () => { flush(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editTitle = (value: string) => {
-    setTitle(value);
+    onTitleChange(value);
     pending.current = value;
     setSaved(false);
     clearTimeout(timer.current);
@@ -79,7 +79,6 @@ export default function InfoPanel({ model, root, mainIds, selected, label, onBac
       <div className="info-body">
         {selected ? (
           <>
-            <button className="info-back" onClick={onBack}>← Machine</button>
             <div className="info-part">
               <strong>{label(selected)}</strong>
               <code>{selected.name}</code>

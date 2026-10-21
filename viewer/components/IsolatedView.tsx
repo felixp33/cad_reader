@@ -20,7 +20,7 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
 
   // Starts at the top-right of the 3D area.
   useEffect(() => {
-    setPos({ x: Math.max(0, host().clientWidth - size.w - 10), y: 12 });
+    setPos({ x: Math.max(0, host().clientWidth - size.w - 10), y: 46 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

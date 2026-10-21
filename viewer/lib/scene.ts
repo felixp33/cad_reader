@@ -51,3 +51,20 @@ export function firstGeneration(roots: Entry[]): Entry[] {
   while (level.length === 1 && level[0].children.length > 0) level = level[0].children;
   return level;
 }
+
+// The machine node itself (the parent of firstGeneration).
+export function findMachine(roots: Entry[]): Entry | null {
+  let level = roots, machine: Entry | null = null;
+  while (level.length === 1 && level[0].children.length > 0) { machine = level[0]; level = machine.children; }
+  return machine ?? roots[0] ?? null;
+}
+
+// Entries from `from` down to `target` (inclusive), or null if target isn't below it.
+export function pathTo(from: Entry, target: Entry): Entry[] | null {
+  if (from === target) return [from];
+  for (const c of from.children) {
+    const p = pathTo(c, target);
+    if (p) return [from, ...p];
+  }
+  return null;
+}

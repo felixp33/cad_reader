@@ -6,7 +6,7 @@ import type { TrackballControls } from 'three/examples/jsm/controls/TrackballCon
 import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
 import Link from 'next/link';
-import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
+import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
 import { useNotes } from '@/lib/useNotes';
 import InfoPanel from './InfoPanel';
@@ -26,6 +26,7 @@ export default function Viewer() {
   const [wire, setWire] = useState(false);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
   const { notes, save: saveNote, remove: removeNote } = useNotes(currentModel);
+  const [title, setTitle] = useState('');
   const [names, setNames] = useState<Record<string, string>>({});
   const [showGiven, setShowGiven] = useState(true);
   const [isolated, setIsolated] = useState<Entry | null>(null);
@@ -121,6 +122,10 @@ export default function Viewer() {
   // Number of notes attached directly to a part, for the badge in the tree.
   const noteCount = (e: Entry) => notes.filter((n) => n.parts.includes(e.name)).length;
 
+  // Breadcrumb "machine / part / component / …" for the current selection.
+  const machine = useMemo(() => (root ? findMachine([root]) : null), [root]);
+  const crumbs = useMemo(() => (machine && selected ? pathTo(machine, selected) ?? [machine] : machine ? [machine] : []), [machine, selected]);
+
   const clearSelection = () => {
     selected?.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0); });
     setSelected(null);
@@ -139,8 +144,8 @@ export default function Viewer() {
             <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h5v-6h4v6h5V10" />
           </svg>
         </Link>
+        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts</Link>
         <span className="topbar-spacer" />
-        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts →</Link>
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
       </header>
@@ -162,10 +167,24 @@ export default function Viewer() {
       </aside>
       <main>
         <canvas ref={canvasRef} />
+        {crumbs.length > 0 && (
+          <nav className="crumbs" aria-label="Selected part path">
+            {crumbs.map((e, i) => (
+              <span key={i} className="crumb-wrap">
+                {i > 0 && <span className="crumb-sep">/</span>}
+                <button
+                  className={`crumb${i === crumbs.length - 1 ? ' current' : ''}`}
+                  title={e.name}
+                  onClick={() => (i === 0 ? clearSelection() : select(e))}
+                >{i === 0 ? title || labelOf(e) : labelOf(e)}</button>
+              </span>
+            ))}
+          </nav>
+        )}
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
-      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} onBack={clearSelection} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
   );
 }
