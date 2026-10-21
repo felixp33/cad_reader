@@ -1,4 +1,6 @@
+import { after } from 'next/server';
 import { getNames, setName } from '@/lib/names';
+import { reindexModel } from '@/lib/mentions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,5 +16,6 @@ export async function PUT(req: Request) {
     return new Response('model, id and name required', { status: 400 });
   }
   setName(model, id, name);
+  after(() => reindexModel(model)); // names are what notes are matched against
   return Response.json({ ok: true });
 }

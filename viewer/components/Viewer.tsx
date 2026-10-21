@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
+import { usePanelWidths } from '@/lib/usePanelWidths';
 import Link from 'next/link';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
@@ -25,9 +26,12 @@ export default function Viewer() {
   const [filter, setFilter] = useState('');
   const [wire, setWire] = useState(false);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
-  const { notes, save: saveNote, remove: removeNote } = useNotes(currentModel);
+  const { notes, save: saveNote, remove: removeNote, refreshSoon } = useNotes(currentModel);
   const [title, setTitle] = useState('');
   const [names, setNames] = useState<Record<string, string>>({});
+  const [aliases, setAliases] = useState<Record<string, string[]>>({});
+  const [history, setHistory] = useState<(Entry | null)[]>([]); // selections we jumped away from by following links
+  const { widths, startDrag, reset: resetWidth } = usePanelWidths();
   const [showGiven, setShowGiven] = useState(true);
   const [isolated, setIsolated] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,11 +59,12 @@ export default function Viewer() {
       controls.handleResize();
     };
     resize();
-    addEventListener('resize', resize);
+    const observer = new ResizeObserver(resize); // also fires when a side column is dragged
+    observer.observe(canvas.parentElement!);
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 
     fetch('/api/models').then((r) => r.json()).then(setModels);
-    return () => { removeEventListener('resize', resize); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
+    return () => { observer.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
   }, []);
 
   const fit = useCallback(() => {
@@ -78,13 +83,16 @@ export default function Viewer() {
     try {
       const { name, model, holder, roots } = await fetchScene(path, setStatus);
       setCurrentModel(path);
-      setNames(await fetch('/api/names?model=' + encodeURIComponent(path)).then((r) => r.json()).catch(() => ({})));
+      const q = '?model=' + encodeURIComponent(path);
+      setNames(await fetch('/api/names' + q).then((r) => r.json()).catch(() => ({})));
+      setAliases(await fetch('/api/aliases' + q).then((r) => r.json()).catch(() => ({})));
       const t = three.current;
       if (t.model) t.scene.remove(t.model);
       t.scene.add(holder);
       t.model = holder;
       setRoot(roots.length === 1 ? roots[0] : { name: name, group: holder, children: roots });
       setSelected(null);
+      setHistory([]);
       setIsolated(null);
       fit();
       const tris = model.protos.flat().reduce((n, c) => n + c.triangles, 0);
@@ -114,6 +122,54 @@ export default function Viewer() {
     }
   };
 
+  // Flies the camera to an entry, keeping the current viewing direction.
+  const focus = (entry: Entry) => {
+    const { camera, controls, canvas, model } = three.current;
+    const dir = camera.position.clone().sub(controls.target);
+    if (dir.lengthSq() === 0) return;
+    const { center, radius } = frameObject(camera, entry.group, canvas.clientWidth / canvas.clientHeight, dir.normalize());
+    if (model) camera.far = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere()).radius * 40;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.minDistance = radius * 0.05;
+    controls.update();
+  };
+
+  const entryById = useMemo(() => {
+    const m = new Map<string, Entry>();
+    const walk = (e: Entry) => { if (!m.has(e.name)) m.set(e.name, e); e.children.forEach(walk); };
+    if (root) walk(root);
+    return m;
+  }, [root]);
+
+  // A term in a note was tapped: show that part (remembering where we came from).
+  const openPart = (id: string) => {
+    const entry = entryById.get(id);
+    if (!entry) return;
+    setHistory((h) => [...h, selected]);
+    select(entry);
+    focus(entry);
+  };
+
+  const goBack = () => {
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    if (prev) { select(prev); focus(prev); } else clearSelection();
+  };
+
+  const savePartNames = async (id: string, name: string, list: string[]) => {
+    const nameChanged = (names[id] ?? '') !== name;
+    const aliasesChanged = (aliases[id] ?? []).join('\n') !== list.join('\n');
+    setNames((n) => { const next = { ...n }; if (name) next[id] = name; else delete next[id]; return next; });
+    setAliases((a) => { const next = { ...a }; if (list.length) next[id] = list; else delete next[id]; return next; });
+    const put = (url: string, body: object) => fetch(url, { method: 'PUT', body: JSON.stringify({ model: currentModel, id, ...body }) });
+    await Promise.all([
+      nameChanged && put('/api/names', { name }),
+      aliasesChanged && put('/api/aliases', { aliases: list }),
+    ]);
+    if (nameChanged || aliasesChanged) refreshSoon();
+  };
+
   const setWireframe = (next: boolean) => {
     setWire(next);
     three.current.model?.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).wireframe = next; });
@@ -137,7 +193,7 @@ export default function Viewer() {
   const labelOf = (e: Entry) => (showGiven && names[e.name]) || e.name;
 
   return (
-    <div className="app">
+    <div className="app" style={{ gridTemplateColumns: `${widths.left}px 1fr ${widths.right}px` }}>
       <header className="topbar">
         <Link className="btn icon-btn" href="/" title="Library" aria-label="Library">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -166,6 +222,8 @@ export default function Viewer() {
         </div>
       </aside>
       <main>
+        <div className="resizer left" onPointerDown={startDrag('left')} onDoubleClick={() => resetWidth('left')} role="separator" aria-orientation="vertical" aria-label="Resize assembly column" />
+        <div className="resizer right" onPointerDown={startDrag('right')} onDoubleClick={() => resetWidth('right')} role="separator" aria-orientation="vertical" aria-label="Resize information column" />
         <canvas ref={canvasRef} />
         {crumbs.length > 0 && (
           <nav className="crumbs" aria-label="Selected part path">
@@ -184,7 +242,7 @@ export default function Viewer() {
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
-      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} aliases={aliases} onPartNames={savePartNames} onOpenPart={openPart} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
   );
 }

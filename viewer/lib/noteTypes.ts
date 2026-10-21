@@ -11,6 +11,10 @@ export const NOTE_TYPES = [
 ] as const;
 export type NoteType = (typeof NOTE_TYPES)[number]['id'];
 
+// A span of a note's text that refers to one or more parts. Found by the background indexer, unless
+// `manual` (set by a person); a manual mention with no parts means "do not link this word".
+export type Mention = { start: number; end: number; text: string; parts: string[]; manual?: boolean };
+
 export type Note = {
   id: string;
   text: string;
@@ -19,4 +23,8 @@ export type Note = {
   author: string;
   createdAt: string;
   updatedAt: string;
+  mentions?: Mention[];
+  indexedAt?: string; // when `mentions` were last computed; older than updatedAt means the indexer still has to run
 };
+
+export const isStale = (n: Note) => !n.indexedAt || n.indexedAt < n.updatedAt;

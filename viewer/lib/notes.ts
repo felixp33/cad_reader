@@ -18,6 +18,12 @@ function write(store: Store) {
 
 export const listNotes = (model: string): Note[] => read()[model] ?? [];
 
+export function setNotes(model: string, notes: Note[]) {
+  const store = read();
+  store[model] = notes;
+  write(store);
+}
+
 export function saveNote(model: string, input: Omit<Note, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Note {
   const store = read();
   const notes = (store[model] ??= []);

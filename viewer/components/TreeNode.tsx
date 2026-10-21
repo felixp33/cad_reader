@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import type { Entry } from '@/lib/scene';
+import { useEffect, useState } from 'react';
+import { pathTo, type Entry } from '@/lib/scene';
 
 export type { Entry };
 
@@ -15,6 +15,10 @@ export default function TreeNode({ entry, depth, filter, selected, onSelect, onI
 }) {
   const [open, setOpen] = useState(depth < 1);
   const [, force] = useState(0);
+  // Open up when the selection is somewhere below (e.g. after following a link in a note).
+  useEffect(() => {
+    if (selected && selected !== entry && pathTo(entry, selected)) setOpen(true);
+  }, [selected, entry]);
   if (!matches(entry, filter, labelOf)) return null;
   const expanded = open || !!filter;
   const visible = entry.group.visible;
