@@ -23,7 +23,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   title: string;
   onTitleChange: (t: string) => void;
   notes: Note[];
-  onSaveNote: (n: NoteInput) => Promise<void>;
+  onSaveNote: (n: NoteInput) => Promise<Note>;
   onRemoveNote: (id: string) => Promise<void>;
 }) {
   const [saved, setSaved] = useState(true);

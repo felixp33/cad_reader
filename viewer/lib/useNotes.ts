@@ -35,13 +35,14 @@ export function useNotes(model: string | null) {
     return () => clearTimeout(t);
   }, [notes, refresh]);
 
-  const save = useCallback(async (input: NoteInput) => {
-    if (!model) return;
+  const save = useCallback(async (input: NoteInput): Promise<Note> => {
+    if (!model) throw new Error('No model loaded');
     const res = await fetch('/api/notes', { method: 'PUT', body: JSON.stringify({ model, note: input }) });
     if (!res.ok) throw new Error(await res.text());
     const saved: Note = await res.json();
     polls.current = 0;
     setNotes((prev) => (prev.some((n) => n.id === saved.id) ? prev.map((n) => (n.id === saved.id ? saved : n)) : [...prev, saved]));
+    return saved;
   }, [model]);
 
   const remove = useCallback(async (id: string) => {

@@ -11,6 +11,17 @@ body { margin:0; height:100vh; background:var(--bg); color:var(--fg); font:13px/
 .app { height:100vh; display:grid; grid-template-columns:320px 1fr 300px; grid-template-rows:auto 1fr; }
 .topbar { grid-column:1 / -1; display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
 .topbar-spacer { flex:1; }
+.profile-wrap { position:relative; margin-left:6px; padding-left:8px; border-left:1px solid var(--line); }
+.profile { display:flex; align-items:center; gap:8px; background:none; border-color:transparent; padding:3px 8px 3px 4px; }
+.profile:hover, .profile[aria-expanded="true"] { background:var(--raised); border-color:var(--line); }
+.profile-menu { position:absolute; right:0; top:calc(100% + 6px); z-index:40; min-width:230px; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 28px var(--shadow); }
+.profile-menu-head { padding:4px 6px 6px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
+.profile-menu button { display:flex; align-items:center; gap:8px; background:none; border-color:transparent; padding:6px; }
+.profile-menu button:hover { background:var(--raised); border-color:var(--line); }
+.profile-menu button.current { background:var(--accent-soft); }
+.profile-check { margin-left:auto; color:var(--accent); font-weight:700; }
+.avatar { width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--accent); color:var(--on-accent); font-size:11px; font-weight:700; }
+.profile-text { display:flex; flex-direction:column; line-height:1.15; } .profile-text strong { font-size:12px; font-weight:600; } .profile-text small { font-size:10px; color:var(--dim); }
 .icon-btn { display:inline-flex; align-items:center; padding:5px 8px; }
 aside { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
 aside h2 { margin:0; padding:10px 12px 4px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); }
@@ -123,7 +134,7 @@ button:disabled { opacity:.4; cursor:default; }
 .kn h3 { margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); display:flex; gap:6px; }
 .kn h3 span { color:var(--accent); }
 .kn h4 { margin:6px 0 0; font-size:11px; color:var(--dim); font-weight:500; }
-.kn-form { display:flex; flex-direction:column; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px; }
+.kn-form { display:flex; flex-direction:column; gap:8px; }
 .kn-textwrap { position:relative; }
 .kn-textwrap textarea { width:100%; padding-right:40px; }
 .kn-mic { position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; }
@@ -136,9 +147,9 @@ button:disabled { opacity:.4; cursor:default; }
 .kn-chips { display:flex; flex-wrap:wrap; gap:4px; }
 .kn-chip { display:inline-flex; align-items:center; gap:4px; background:var(--raised); border:1px solid var(--line); border-radius:10px; padding:1px 8px; font-size:11px; }
 .kn-chip button { border:0; background:none; padding:0; color:var(--dim); }
-.kn-links input, .kn-row input { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:5px 8px; font:inherit; font-size:12px; min-width:0; }
-.kn-row { display:flex; gap:6px; align-items:center; } .kn-row input { flex:1; }
-.kn-row .primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
+.kn-links input { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:5px 8px; font:inherit; font-size:12px; min-width:0; }
+.kn-row { display:flex; gap:6px; align-items:center; }
+.kn-save { flex:1; font-size:11px; color:var(--dim); } .kn-save.err { color:var(--err); }
 .kn-card { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
 .kn-card.inherited { opacity:.75; }
 .kn-card p { margin:0; white-space:pre-wrap; }

@@ -8,6 +8,7 @@ import { frameObject } from '@/lib/frame';
 import { usePanelWidths } from '@/lib/usePanelWidths';
 import { cssColor, subscribeTheme } from '@/lib/theme';
 import Settings from './Settings';
+import Profile from './Profile';
 import Link from 'next/link';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
@@ -201,6 +202,7 @@ export default function Viewer() {
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
         <Settings />
+        <Profile />
       </header>
       <aside>
         <h2>Project models</h2>

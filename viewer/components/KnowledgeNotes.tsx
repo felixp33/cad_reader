@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useUser } from '@/lib/user';
 import type { Entry } from '@/lib/scene';
 import { MACHINE, NOTE_TYPES, type Mention, type Note, type NoteType } from '@/lib/noteTypes';
 import type { NoteInput } from '@/lib/useNotes';
@@ -14,9 +15,11 @@ type Props = {
   label: (e: Entry) => string;
   names: Record<string, string>;
   onOpenPart: (id: string) => void;
-  onSave: (n: NoteInput) => Promise<void>;
+  onSave: (n: NoteInput) => Promise<Note>;
   onRemove: (id: string) => Promise<void>;
 };
+
+const AUTOSAVE_MS = 800;
 
 const typeLabel = (t: NoteType) => NOTE_TYPES.find((x) => x.id === t)?.label ?? t;
 
@@ -24,6 +27,7 @@ const typeLabel = (t: NoteType) => NOTE_TYPES.find((x) => x.id === t)?.label ?? 
 export default function KnowledgeNotes({ notes, root, selected, label, names, onOpenPart, onSave, onRemove }: Props) {
   const target = selected?.name ?? MACHINE;
   const [editing, setEditing] = useState<Note | null>(null);
+  const [draft, setDraft] = useState(0); // bumped to start a fresh new-note form
   useEffect(() => setEditing(null), [target]);
 
   // Entries by id, and each entry's ancestor ids (so notes on an assembly show up for its parts).
@@ -72,12 +76,12 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
     <section className="kn">
       <h3>Knowledge notes <span>{direct.length}</span></h3>
       <NoteForm
-        key={editing?.id ?? `new-${target}`}
+        key={editing?.id ?? `new-${target}-${draft}`}
         target={target}
         initial={editing}
         names={names}
-        onSave={async (n) => { await onSave(n); setEditing(null); }}
-        onCancel={editing ? () => setEditing(null) : undefined}
+        onSave={onSave}
+        onDone={() => { setEditing(null); setDraft((d) => d + 1); }}
       />
       {direct.map((n) => card(n))}
       {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
@@ -88,14 +92,19 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
 
 const overlaps = (a: Mention, b: Mention) => a.start < b.end && b.start < a.end;
 
-function NoteForm({ target, initial, names, onSave, onCancel }: {
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+// Edits a new or existing note. Changes are saved automatically shortly after typing/dictation pauses,
+// and on leaving the form; the first save of a new note creates it, later ones update it.
+function NoteForm({ target, initial, names, onSave, onDone }: {
   target: string; initial: Note | null; names: Record<string, string>;
-  onSave: (n: NoteInput) => Promise<void>; onCancel?: () => void;
+  onSave: (n: NoteInput) => Promise<Note>; onDone: () => void;
 }) {
   const [text, setText] = useState(initial?.text ?? '');
   const links = initial?.parts ?? [target]; // a note is about what was selected when it was written
-  const [author, setAuthor] = useState('');
-  const [busy, setBusy] = useState(false);
+  const user = useUser();
+  const author = initial?.author || user.name;
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   // Manual corrections to the automatically found links (null = untouched), only offered while the text is unchanged.
   const [overrides, setOverrides] = useState<Mention[] | null>(null);
   const textSame = !!initial && text.trim() === initial.text;
@@ -107,17 +116,38 @@ function NoteForm({ target, initial, names, onSave, onCancel }: {
   };
   const dictation = useDictation((t) => setText((prev) => (prev ? prev + ' ' : '') + t));
 
-  useEffect(() => { try { setAuthor(localStorage.getItem('cad.author') ?? ''); } catch { /* no storage */ } }, []);
+  // Saves run one after another so a new note is created once, and later saves reuse its id.
+  const id = useRef(initial?.id);
+  const queue = useRef(Promise.resolve());
+  const lastSaved = useRef(initial ? JSON.stringify([initial.text, null]) : '');
+  const latest = useRef<NoteInput | null>(null);
+  latest.current = text.trim() && links.length ? { text, parts: links, author, overrides: textSame && overrides ? overrides : undefined } : null;
 
-  const submit = async () => {
-    if (!text.trim() || links.length === 0) return;
+  const flush = useCallback(() => {
+    queue.current = queue.current.then(async () => {
+      const input = latest.current;
+      const key = input && JSON.stringify([input.text.trim(), input.overrides ?? null]);
+      if (!input || key === lastSaved.current) return;
+      setSaveState('saving');
+      try {
+        const saved = await onSave({ ...input, id: id.current });
+        id.current = saved.id;
+        lastSaved.current = key!;
+        setSaveState('saved');
+      } catch { setSaveState('error'); }
+    });
+  }, [onSave]);
+
+  useEffect(() => {
+    const t = setTimeout(flush, AUTOSAVE_MS);
+    return () => clearTimeout(t);
+  }, [text, overrides, flush]);
+  useEffect(() => () => flush(), [flush]); // save pending changes when the form goes away
+
+  const done = () => {
     if (dictation.listening) dictation.toggle();
-    setBusy(true);
-    try {
-      try { localStorage.setItem('cad.author', author); } catch { /* no storage */ }
-      await onSave({ id: initial?.id, text, parts: links, author, overrides: textSame && overrides ? overrides : undefined });
-      if (!initial) setText('');
-    } finally { setBusy(false); }
+    flush();
+    onDone();
   };
 
   return (
@@ -153,9 +183,10 @@ function NoteForm({ target, initial, names, onSave, onCancel }: {
         ) : <div className="kn-hint">Links to parts are updated after saving.</div>
       )}
       <div className="kn-row">
-        <input value={author} placeholder="Your name" onChange={(e) => setAuthor(e.target.value)} />
-        {onCancel && <button onClick={onCancel}>Cancel</button>}
-        <button className="primary" disabled={busy || !text.trim()} onClick={submit}>{busy ? 'Saving…' : initial ? 'Update note' : 'Save note'}</button>
+        <span className={`kn-save${saveState === 'error' ? ' err' : ''}`}>
+          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? "Couldn't save — retrying on next change" : ''}
+        </span>
+        {(initial || saveState !== 'idle') && <button onClick={done}>{initial ? 'Done' : 'New note'}</button>}
       </div>
     </div>
   );
