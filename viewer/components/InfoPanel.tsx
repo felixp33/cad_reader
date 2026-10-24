@@ -8,15 +8,14 @@ import KnowledgeNotes from './KnowledgeNotes';
 
 // Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
 // selected part, and how many main / unique parts have notes.
-export default function InfoPanel({ model, root, mainIds, selected, label, names, aliases, onPartNames, onOpenPart, backLabel, onBack, onIsolate, title, onTitleChange, notes, onSaveNote, onRemoveNote }: {
+export default function InfoPanel({ model, root, mainIds, selected, label, names, onPartName, onOpenPart, backLabel, onBack, onIsolate, title, onTitleChange, notes, onSaveNote, onRemoveNote }: {
   model: string | null;
   root: Entry | null;
   mainIds: string[];
   selected: Entry | null;
   label: (e: Entry) => string;
   names: Record<string, string>;
-  aliases: Record<string, string[]>;
-  onPartNames: (id: string, name: string, aliases: string[]) => void;
+  onPartName: (id: string, name: string) => void;
   onOpenPart: (id: string) => void;
   backLabel: string | null; // set when the selection was reached by following a link in a note
   onBack: () => void;
@@ -92,7 +91,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
               <code>{selected.name}</code>
               <button className="info-isolate" onClick={() => onIsolate(selected)}>View isolated</button>
             </div>
-            <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} aliases={aliases[selected.name] ?? []} onSave={onPartNames} />
+            <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />
           </>
         ) : (
           <label>Name
@@ -100,6 +99,8 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
           </label>
         )}
         <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} names={names} onOpenPart={onOpenPart} onSave={onSaveNote} onRemove={onRemoveNote} />
+      </div>
+      <div className="info-foot">
         <dl className="facts">
           <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
           <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
@@ -109,14 +110,10 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   );
 }
 
-// Name and alternative names of the selected part. The notes' text is matched against these, so
-// "hatch" can be taught as another word for the door. Autosaves shortly after typing stops.
-function PartNaming({ id, name, aliases, onSave }: {
-  id: string; name: string; aliases: string[]; onSave: (id: string, name: string, aliases: string[]) => void;
-}) {
+// Name of the selected part. The notes' text is matched against it. Autosaves shortly after typing stops.
+function PartNaming({ id, name, onSave }: { id: string; name: string; onSave: (id: string, name: string) => void }) {
   const [n, setN] = useState(name);
-  const [a, setA] = useState(aliases.join(', '));
-  const latest = useRef({ n, a });
+  const latest = useRef(n);
   const dirty = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const save = useRef(onSave);
@@ -126,26 +123,21 @@ function PartNaming({ id, name, aliases, onSave }: {
     clearTimeout(timer.current);
     if (!dirty.current) return;
     dirty.current = false;
-    save.current(id, latest.current.n.trim(), latest.current.a.split(',').map((x) => x.trim()).filter(Boolean));
+    save.current(id, latest.current.trim());
   };
   useEffect(() => flush, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const change = (next: { n: string; a: string }) => {
-    setN(next.n); setA(next.a);
-    latest.current = next;
+  const change = (value: string) => {
+    setN(value);
+    latest.current = value;
     dirty.current = true;
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, 600);
   };
 
   return (
-    <>
-      <label>Name
-        <input value={n} placeholder="What is this part called?" onChange={(e) => change({ n: e.target.value, a })} onBlur={flush} />
-      </label>
-      <label>Also called
-        <input value={a} placeholder="hatch, flap, … (comma separated)" onChange={(e) => change({ n, a: e.target.value })} onBlur={flush} />
-      </label>
-    </>
+    <label>Name
+      <input value={n} placeholder="What is this part called?" onChange={(e) => change(e.target.value)} onBlur={flush} />
+    </label>
   );
 }

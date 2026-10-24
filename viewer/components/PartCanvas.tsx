@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
 import type { Entry } from '@/lib/scene';
+import { cssColor, subscribeTheme } from '@/lib/theme';
 
 // A canvas with its own renderer showing a single part/sub-assembly on its own.
 // Wheel zooms to the cursor, double-click recenters; `resetRef` re-frames the whole part.
@@ -22,7 +23,8 @@ export default function PartCanvas({ entry, resetRef, wireframe = false }: {
     renderer.setPixelRatio(devicePixelRatio);
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1e25);
+    scene.background = new THREE.Color(cssColor('--canvas-bg2'));
+    const unsubscribeTheme = subscribeTheme(() => { scene.background = new THREE.Color(cssColor('--canvas-bg2')); });
     const camera = new THREE.PerspectiveCamera(40, canvas.clientWidth / canvas.clientHeight, 0.1, 1e6);
     scene.add(new THREE.HemisphereLight(0xffffff, 0x404858, 1.1));
     const sun = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -85,7 +87,7 @@ export default function PartCanvas({ entry, resetRef, wireframe = false }: {
     ro.observe(canvas);
 
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-    return () => { mats.forEach((m) => m.dispose()); canvas.removeEventListener('dblclick', onDouble); ro.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
+    return () => { unsubscribeTheme(); mats.forEach((m) => m.dispose()); canvas.removeEventListener('dblclick', onDouble); ro.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
   }, [entry, resetRef]);
 
   useEffect(() => {

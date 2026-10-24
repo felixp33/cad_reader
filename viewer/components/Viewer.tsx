@@ -6,6 +6,8 @@ import type { TrackballControls } from 'three/examples/jsm/controls/TrackballCon
 import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
 import { usePanelWidths } from '@/lib/usePanelWidths';
+import { cssColor, subscribeTheme } from '@/lib/theme';
+import Settings from './Settings';
 import Link from 'next/link';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
@@ -29,7 +31,6 @@ export default function Viewer() {
   const { notes, save: saveNote, remove: removeNote, refreshSoon } = useNotes(currentModel);
   const [title, setTitle] = useState('');
   const [names, setNames] = useState<Record<string, string>>({});
-  const [aliases, setAliases] = useState<Record<string, string[]>>({});
   const [history, setHistory] = useState<(Entry | null)[]>([]); // selections we jumped away from by following links
   const { widths, startDrag, reset: resetWidth } = usePanelWidths();
   const [showGiven, setShowGiven] = useState(true);
@@ -41,7 +42,8 @@ export default function Viewer() {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(devicePixelRatio);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x14171c);
+    scene.background = new THREE.Color(cssColor('--canvas-bg'));
+    const unsubscribeTheme = subscribeTheme(() => { scene.background = new THREE.Color(cssColor('--canvas-bg')); });
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1e6);
     const { controls, dispose: disposeControls } = createControls(camera, canvas);
     scene.add(new THREE.HemisphereLight(0xffffff, 0x404858, 1.1));
@@ -57,6 +59,7 @@ export default function Viewer() {
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       controls.handleResize();
+      renderer.render(scene, camera); // resizing clears the canvas; repaint now to avoid a flash
     };
     resize();
     const observer = new ResizeObserver(resize); // also fires when a side column is dragged
@@ -64,7 +67,7 @@ export default function Viewer() {
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 
     fetch('/api/models').then((r) => r.json()).then(setModels);
-    return () => { observer.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
+    return () => { unsubscribeTheme(); observer.disconnect(); renderer.setAnimationLoop(null); disposeControls(); renderer.dispose(); };
   }, []);
 
   const fit = useCallback(() => {
@@ -85,7 +88,6 @@ export default function Viewer() {
       setCurrentModel(path);
       const q = '?model=' + encodeURIComponent(path);
       setNames(await fetch('/api/names' + q).then((r) => r.json()).catch(() => ({})));
-      setAliases(await fetch('/api/aliases' + q).then((r) => r.json()).catch(() => ({})));
       const t = three.current;
       if (t.model) t.scene.remove(t.model);
       t.scene.add(holder);
@@ -157,17 +159,11 @@ export default function Viewer() {
     if (prev) { select(prev); focus(prev); } else clearSelection();
   };
 
-  const savePartNames = async (id: string, name: string, list: string[]) => {
-    const nameChanged = (names[id] ?? '') !== name;
-    const aliasesChanged = (aliases[id] ?? []).join('\n') !== list.join('\n');
+  const savePartName = async (id: string, name: string) => {
+    if ((names[id] ?? '') === name) return;
     setNames((n) => { const next = { ...n }; if (name) next[id] = name; else delete next[id]; return next; });
-    setAliases((a) => { const next = { ...a }; if (list.length) next[id] = list; else delete next[id]; return next; });
-    const put = (url: string, body: object) => fetch(url, { method: 'PUT', body: JSON.stringify({ model: currentModel, id, ...body }) });
-    await Promise.all([
-      nameChanged && put('/api/names', { name }),
-      aliasesChanged && put('/api/aliases', { aliases: list }),
-    ]);
-    if (nameChanged || aliasesChanged) refreshSoon();
+    await fetch('/api/names', { method: 'PUT', body: JSON.stringify({ model: currentModel, id, name }) });
+    refreshSoon();
   };
 
   const setWireframe = (next: boolean) => {
@@ -204,6 +200,7 @@ export default function Viewer() {
         <span className="topbar-spacer" />
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
+        <Settings />
       </header>
       <aside>
         <h2>Project models</h2>
@@ -242,7 +239,7 @@ export default function Viewer() {
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         <div className="status">{status}</div>
       </main>
-      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} aliases={aliases} onPartNames={savePartNames} onOpenPart={openPart} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} onPartName={savePartName} onOpenPart={openPart} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
   );
 }
