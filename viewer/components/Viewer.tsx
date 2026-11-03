@@ -15,6 +15,7 @@ import { useNotes } from '@/lib/useNotes';
 import InfoPanel from './InfoPanel';
 import Toggle from './Toggle';
 import TreeNode from './TreeNode';
+import { SkeletonRows } from './Skeleton';
 
 type ModelFile = { path: string; size: number };
 
@@ -189,7 +190,7 @@ export default function Viewer() {
   const labelOf = (e: Entry) => (showGiven && names[e.name]) || e.name;
 
   return (
-    <div className="app" style={{ gridTemplateColumns: `${widths.left}px 1fr ${widths.right}px` }}>
+    <div className="app" style={{ '--left': `${widths.left}px`, '--right': `${widths.right}px` } as React.CSSProperties}>
       <TopBar search={{ value: filter, onChange: setFilter, placeholder: 'Search parts…' }} actions={<>
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
@@ -207,6 +208,7 @@ export default function Viewer() {
           ))}
         </div>
         <h2>Assembly</h2>
+        {loading && !root && <SkeletonRows rows={9} />}
         <div className="tree">
           {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} labelOf={labelOf} noteCount={noteCount} />}
         </div>

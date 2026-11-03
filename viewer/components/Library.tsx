@@ -4,23 +4,33 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
+import { BookOpen, History, ListChecks, Mic, Network, Plus, ScanSearch, Slice } from 'lucide-react';
 import AddFilesDialog from './AddFilesDialog';
+import { Skeleton, SkeletonCards } from './Skeleton';
 import TopBar from './TopBar';
 
 const FEATURES = [
-  { href: '/section', label: 'Section view', hint: 'Cut through a machine' },
-  { href: '/describe', label: 'Part finder', hint: 'Type or speak, see only those parts' },
+  { href: '/section', label: 'Section view', hint: 'Cut through a machine', icon: Slice },
+  { href: '/describe', label: 'Part finder', hint: 'Type or speak, see only those parts', icon: ScanSearch },
 ];
 const KNOWLEDGE = [
-  { href: '/knowledge/catalog', label: 'Catalog', hint: 'Look things up' },
-  { href: '/knowledge/applicability', label: 'What applies?', hint: 'Answer a few questions' },
-  { href: '/knowledge/timeline', label: 'Timeline', hint: 'What changes, and when' },
-  { href: '/knowledge/graph', label: 'Relations', hint: 'How they connect' },
-  { href: '/knowledge/capture', label: 'Capture', hint: 'Dictate now, sort later' },
+  { href: '/knowledge/catalog', label: 'Catalog', hint: 'Look things up', icon: BookOpen },
+  { href: '/knowledge/applicability', label: 'What applies?', hint: 'Answer a few questions', icon: ListChecks },
+  { href: '/knowledge/timeline', label: 'Timeline', hint: 'What changes, and when', icon: History },
+  { href: '/knowledge/graph', label: 'Relations', hint: 'How they connect', icon: Network },
+  { href: '/knowledge/capture', label: 'Capture', hint: 'Dictate now, sort later', icon: Mic },
 ];
 
 type ModelFile = { path: string; size: number };
 type Preview = { url?: string; state: 'loading' | 'ready' | 'error'; message?: string };
+
+type Feature = { href: string; label: string; hint: string; icon: React.ComponentType<{ size?: number }> };
+const FeatureLink = ({ f }: { f: Feature }) => (
+  <Link className="feature" href={f.href}>
+    <span className="feature-icon"><f.icon size={18} /></span>
+    <span className="feature-text"><strong>{f.label}</strong><small>{f.hint}</small></span>
+  </Link>
+);
 
 export default function Library() {
   const [models, setModels] = useState<ModelFile[] | null>(null);
@@ -68,17 +78,17 @@ export default function Library() {
   return (
     <div className="library">
       {adding && <AddFilesDialog onClose={() => setAdding(false)} onUploaded={() => setReload((n) => n + 1)} />}
-      <TopBar search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={<button className="btn" onClick={() => setAdding(true)}>+ Add</button>}>
+      <TopBar search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={<button className="btn" onClick={() => setAdding(true)}><Plus className="ic" size={16} /> Add</button>}>
         <h1 className="topbar-title">Machines</h1>
         <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
       </TopBar>
       <nav className="feature-row" aria-label="Tools">
-        {FEATURES.map((f) => <Link key={f.href} className="feature" href={f.href}><strong>{f.label}</strong><small>{f.hint}</small></Link>)}
+        {FEATURES.map((f) => <FeatureLink key={f.href} f={f} />)}
         <span className="feature-sep" aria-hidden />
         <span className="feature-group">Knowledge</span>
-        {KNOWLEDGE.map((f) => <Link key={f.href} className="feature" href={f.href}><strong>{f.label}</strong><small>{f.hint}</small></Link>)}
+        {KNOWLEDGE.map((f) => <FeatureLink key={f.href} f={f} />)}
       </nav>
-      {models === null && <div className="naming-empty">Loading…</div>}
+      {models === null && <SkeletonCards />}
       {models?.length === 0 && <div className="naming-empty">No 3D files found. Use “Add” to import some.</div>}
       {models && models.length > 0 && shown?.length === 0 && <div className="naming-empty">No machines match “{query}”.</div>}
       <div className="grid">
@@ -89,7 +99,7 @@ export default function Library() {
             <div key={m.path} className="card">
               <Link href={`/viewer?model=${q}`} className="card-preview">
                 {pv?.url && <img src={pv.url} alt="" />}
-                {pv?.state === 'loading' && <span>Generating preview…<br /><small>first time takes a minute</small></span>}
+                {pv?.state === 'loading' && <><Skeleton h="100%" w="100%" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} /><span className="card-wait">Generating preview…<br /><small>first time takes a minute</small></span></>}
                 {pv?.state === 'error' && <span title={pv.message}>Preview failed</span>}
               </Link>
               <div className="card-info">

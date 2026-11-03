@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
+import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
 import PartCanvas from './PartCanvas';
 import TopBar from './TopBar';
 
@@ -114,7 +115,7 @@ export default function Naming() {
           <aside className="naming-list">
             {parts.map((p, i) => (
               <div key={p.name} className={`naming-item${i === index ? ' sel' : ''}`} onClick={() => go(i)}>
-                <span className="naming-check">{names[p.name] ? '✓' : '○'}</span>
+                <span className="naming-check">{names[p.name] ? <Check size={14} /> : <Circle size={12} />}</span>
                 <span className="naming-item-text">
                   <span>{names[p.name] ?? 'unnamed'}</span>
                   <small>{p.name}</small>
@@ -126,8 +127,8 @@ export default function Naming() {
             <div className="naming-view">
               <PartCanvas entry={current!} resetRef={resetRef} />
               <button className="naming-reset" onClick={() => resetRef.current()} title="Recenter">⌖</button>
-              <button className="naming-arrow left" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous part">←</button>
-              <button className="naming-arrow right" onClick={() => go(index + 1)} disabled={index === parts.length - 1} aria-label="Next part">→</button>
+              <button className="naming-arrow left" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous part"><ChevronLeft size={22} /></button>
+              <button className="naming-arrow right" onClick={() => go(index + 1)} disabled={index === parts.length - 1} aria-label="Next part"><ChevronRight size={22} /></button>
               <div className="naming-count">{index + 1} / {parts.length}</div>
             </div>
             <div className="naming-form">

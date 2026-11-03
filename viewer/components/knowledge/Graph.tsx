@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { KnowledgeItem } from '@/lib/knowledgeTypes';
 import { useKnowledge } from '@/lib/useKnowledge';
 import { ItemDetail } from './ItemParts';
+import { SkeletonRows } from '../Skeleton';
 import KnowledgeShell from './KnowledgeShell';
 
 const W = 900, H = 640;
@@ -49,7 +50,7 @@ export default function Graph() {
     <KnowledgeShell current="/knowledge/graph" title="Relations">
       <div className="kcols two">
         <section className="kgraph">
-          {items === null && <div className="naming-empty">Loading…</div>}
+          {items === null && <SkeletonRows rows={8} />}
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Network of related norms, rules and laws">
             {edges.map(([a, b], i) => {
               const hot = near.has(a) && near.has(b) && (items![a].id === selId || items![b].id === selId);

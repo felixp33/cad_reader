@@ -1,3 +1,4 @@
+import '@fontsource-variable/inter';
 import './globals.css';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 

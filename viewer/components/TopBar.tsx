@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { House } from 'lucide-react';
 import Settings from './Settings';
 import Profile from './Profile';
 
@@ -12,9 +13,7 @@ export default function TopBar({ children, actions, search }: {
   return (
     <header className="topbar">
       <Link className="btn icon-btn" href="/" title="Library" aria-label="Library">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h5v-6h4v6h5V10" />
-        </svg>
+        <House className="ic" size={16} aria-hidden />
       </Link>
       {children}
       <span className="topbar-spacer" />

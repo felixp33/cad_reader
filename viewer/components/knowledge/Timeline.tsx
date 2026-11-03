@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { statusLabel } from '@/lib/knowledgeTypes';
 import { useKnowledge } from '@/lib/useKnowledge';
 import { ItemDetail, KindBadge } from './ItemParts';
+import { SkeletonRows } from '../Skeleton';
 import KnowledgeShell from './KnowledgeShell';
 
 // Version 3 — the change-over-time emphasis: everything laid out by year, so you see what is new,
@@ -26,7 +27,7 @@ export default function Timeline() {
     <KnowledgeShell current="/knowledge/timeline" title="Timeline">
       <div className="kcols two">
         <section className="ktimeline">
-          {items === null && <div className="naming-empty">Loading…</div>}
+          {items === null && <SkeletonRows rows={8} />}
           {years.map((y) => (
             <div key={y.year} className="kyear">
               <div className="kyear-label">{y.year === 'undated' ? 'No date' : y.year}</div>

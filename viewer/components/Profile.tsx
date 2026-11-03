@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Check } from 'lucide-react';
 import { USERS, initials, setUser, useUser } from '@/lib/user';
 
 // Signed-in user badge for the top bar; clicking it opens a menu to switch between the mock accounts.
@@ -37,7 +38,7 @@ export default function Profile() {
                 <strong>{u.name}</strong>
                 <small>{u.role}</small>
               </span>
-              {u.id === user.id && <span className="profile-check" aria-hidden>✓</span>}
+              {u.id === user.id && <Check className="profile-check" size={16} aria-hidden />}
             </button>
           ))}
         </div>

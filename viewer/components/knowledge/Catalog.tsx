@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { KINDS, TOPICS, type Kind, type Topic } from '@/lib/knowledgeTypes';
 import { useKnowledge } from '@/lib/useKnowledge';
 import { ItemDetail, ItemForm, KindBadge } from './ItemParts';
+import { SkeletonRows } from '../Skeleton';
 import KnowledgeShell from './KnowledgeShell';
 
 // Version 1 — the lookup emphasis: a searchable, filterable reference list with full detail.
@@ -35,7 +36,7 @@ export default function Catalog() {
           <div className="chips">{TOPICS.map((t) => <button key={t.id} className="chip pick" aria-pressed={topic === t.id} onClick={() => setTopic(topic === t.id ? null : t.id)}>{t.label}</button>)}</div>
         </aside>
         <section className="klistpane">
-          {items === null && <div className="naming-empty">Loading…</div>}
+          {items === null && <SkeletonRows rows={8} />}
           {items && shown.length === 0 && <div className="naming-empty">Nothing matches.</div>}
           {shown.map((i) => (
             <button key={i.id} className={`krow-item${selId === i.id ? ' sel' : ''}`} onClick={() => { setSelId(i.id); setForm(null); }}>

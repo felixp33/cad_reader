@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronDown, ChevronRight, Eye, EyeOff, Maximize2 } from 'lucide-react';
 import { pathTo, type Entry } from '@/lib/scene';
 
 export type { Entry };
@@ -27,12 +28,12 @@ export default function TreeNode({ entry, depth, filter, selected, onSelect, onI
     <div>
       <div className={`node${selected === entry ? ' sel' : ''}${visible ? '' : ' off'}`} onClick={() => onSelect(entry)}>
         <span className="twist" onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>
-          {entry.children.length ? (expanded ? '▾' : '▸') : ''}
+          {entry.children.length ? (expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : null}
         </span>
         <span className="label" title={entry.name}>{labelOf(entry)}</span>
         {noteCount(entry) > 0 && <span className="note-badge" title={`${noteCount(entry)} knowledge note(s)`}>●{noteCount(entry) > 1 ? noteCount(entry) : ''}</span>}
-        <span className="eye iso-btn" title="View isolated" onClick={(e) => { e.stopPropagation(); onIsolate(entry); }}>⧉</span>
-        <span className="eye" onClick={(e) => { e.stopPropagation(); entry.group.visible = !visible; force((n) => n + 1); }}>👁</span>
+        <span className="eye iso-btn" title="View isolated" onClick={(e) => { e.stopPropagation(); onIsolate(entry); }}><Maximize2 size={13} /></span>
+        <span className="eye" onClick={(e) => { e.stopPropagation(); entry.group.visible = !visible; force((n) => n + 1); }}>{visible ? <Eye size={14} /> : <EyeOff size={14} />}</span>
       </div>
       {expanded && entry.children.length > 0 && (
         <div className="children">

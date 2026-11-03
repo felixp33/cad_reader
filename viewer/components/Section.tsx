@@ -6,6 +6,7 @@ import { cssColor } from '@/lib/theme';
 import { useModelPick } from '@/lib/useModelPick';
 import { useModelScene } from '@/lib/useModelScene';
 import Toggle from './Toggle';
+import { StageLoading } from './Skeleton';
 import TopBar from './TopBar';
 
 const AXES = [
@@ -97,6 +98,7 @@ export default function Section() {
       </aside>
       <main className="stage-main">
         <canvas ref={canvasRef} />
+        {!holder && <StageLoading />}
         <div className="status">{status}</div>
       </main>
     </div>

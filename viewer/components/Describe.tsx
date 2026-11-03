@@ -1,5 +1,6 @@
 'use client';
 
+import { Mic, Square } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useDictation } from '@/lib/useDictation';
@@ -7,6 +8,7 @@ import { useModelPick } from '@/lib/useModelPick';
 import { useModelScene } from '@/lib/useModelScene';
 import type { Entry } from '@/lib/scene';
 import Toggle from './Toggle';
+import { StageLoading } from './Skeleton';
 import TopBar from './TopBar';
 
 type Mention = { text: string; parts: string[] };
@@ -94,7 +96,7 @@ export default function Describe() {
         />
         <div className="stage-buttons">
           {dictation.supported && (
-            <button className="btn" onClick={dictation.toggle} aria-pressed={dictation.listening}>{dictation.listening ? '■ Stop' : '🎙 Speak'}</button>
+            <button className="btn" onClick={dictation.toggle} aria-pressed={dictation.listening}>{dictation.listening ? <><Square className="ic" size={13} /> Stop</> : <><Mic className="ic" size={15} /> Speak</>}</button>
           )}
           <button className="btn" onClick={() => setText('')} disabled={!text}>Clear</button>
         </div>
@@ -111,6 +113,7 @@ export default function Describe() {
       </aside>
       <main className="stage-main">
         <canvas ref={canvasRef} />
+        {!holder && <StageLoading />}
         <div className="status">{status}</div>
       </main>
     </div>

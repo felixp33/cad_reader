@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, FolderOpen, Upload, X } from 'lucide-react';
 
 const ACCEPT = '.stp,.step,.igs,.iges,.brep,.brp,.stl';
 type Item = { file: File; path: string };
@@ -74,7 +75,7 @@ export default function AddFilesDialog({ onClose, onUploaded }: { onClose: () =>
       <div className="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="add-title" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2 id="add-title">Add 3D files</h2>
-          <button className="icon-btn" aria-label="Close" disabled={busy} onClick={onClose}>✕</button>
+          <button className="icon-btn" aria-label="Close" disabled={busy} onClick={onClose}><X className="ic" size={16} /></button>
         </div>
         <div className="modal-body">
           <div
@@ -83,11 +84,12 @@ export default function AddFilesDialog({ onClose, onUploaded }: { onClose: () =>
             onDragLeave={() => setOver(false)}
             onDrop={onDrop}
           >
+            <Upload size={28} className="dropzone-icon" aria-hidden />
             <strong>Drop files or a folder here</strong>
             <small>STEP, IGES, BREP, STL</small>
             <div className="dropzone-actions">
               <div className="add-menu">
-                <button className="btn" disabled={busy} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>Browse computer… ▾</button>
+                <button className="btn" disabled={busy} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><FolderOpen className="ic" size={15} /> Browse computer <ChevronDown className="ic" size={14} /></button>
                 {menu && (
                   <div className="add-menu-list" role="menu">
                     <button role="menuitem" onClick={() => { setMenu(false); fileInput.current?.click(); }}>Files</button>

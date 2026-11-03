@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Mic, Square, Trash2 } from 'lucide-react';
 import { KINDS, type Kind } from '@/lib/knowledgeTypes';
 import { useDictation } from '@/lib/useDictation';
 import { useKnowledge } from '@/lib/useKnowledge';
@@ -32,7 +33,7 @@ export default function Capture() {
         <div className="kcompose">
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} aria-label="New knowledge" placeholder="“Guards need an interlock if they are opened more than once per shift…”" onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) add(); }} />
           <div className="stage-buttons">
-            {dictation.supported && <button className="btn" onClick={dictation.toggle} aria-pressed={dictation.listening}>{dictation.listening ? '■ Stop' : '🎙 Speak'}</button>}
+            {dictation.supported && <button className="btn" onClick={dictation.toggle} aria-pressed={dictation.listening}>{dictation.listening ? <><Square className="ic" size={13} /> Stop</> : <><Mic className="ic" size={15} /> Speak</>}</button>}
             <button className="btn primary" onClick={add} disabled={!text.trim()}>Save to Unsorted</button>
           </div>
           {dictation.interim && <small className="stage-help">{dictation.interim}…</small>}
@@ -52,7 +53,7 @@ export default function Capture() {
                   {i.summary && i.summary !== i.title && <p>{i.summary}</p>}
                   <div className="kcard-foot">
                     <select aria-label="Move to" value={i.kind} onChange={(e) => move(i.id, e.target.value as Kind)}>{KINDS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
-                    <button className="icon" aria-label="Delete" title="Delete" onClick={() => { if (confirm('Delete this entry?')) remove(i.id); }}>✕</button>
+                    <button className="icon" aria-label="Delete" title="Delete" onClick={() => { if (confirm('Delete this entry?')) remove(i.id); }}><Trash2 className="ic" size={14} /></button>
                   </div>
                 </div>
               ))}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
 import PartCanvas from './PartCanvas';
+import { X } from 'lucide-react';
 import Toggle from './Toggle';
 
 const MIN_W = 260, MIN_H = 200, MAX_W = 900, MAX_H = 800;
@@ -20,7 +21,8 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
 
   // Starts at the top-right of the 3D area.
   useEffect(() => {
-    setPos({ x: Math.max(0, host().clientWidth - size.w - 10), y: 46 });
+    const right = parseFloat(getComputedStyle(host()).getPropertyValue('--right')) || 0; // clear the floating info panel
+    setPos({ x: Math.max(0, host().clientWidth - size.w - right - 24), y: 56 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,7 +68,7 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
         <span className="iso-actions">
           <Toggle label="Wireframe" checked={wireframe} onChange={setWireframe} />
           <button onClick={() => resetRef.current()} title="Recenter and fit (double-click also recenters)">⌖</button>
-          <button onClick={onClose}>✕</button>
+          <button onClick={onClose} aria-label="Close"><X className="ic" size={14} /></button>
         </span>
       </div>
       <div className="iso-body" ref={bodyRef}><PartCanvas entry={entry} resetRef={resetRef} wireframe={wireframe} /></div>

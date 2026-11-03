@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
 import type { Note } from '@/lib/noteTypes';
 import type { NoteInput } from '@/lib/useNotes';
+import { ArrowLeft, Maximize2 } from 'lucide-react';
 import KnowledgeNotes from './KnowledgeNotes';
 
 // Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
@@ -27,6 +28,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   onRemoveNote: (id: string) => Promise<void>;
 }) {
   const [saved, setSaved] = useState(true);
+  const [tab, setTab] = useState<'info' | 'notes'>('info');
   const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -82,30 +84,46 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   return (
     <aside className="info">
       <h2>{selected ? 'Part' : 'Machine'} {saved ? '' : '· saving…'}</h2>
+      <div className="info-tabs segmented" role="tablist" aria-label="Information sections">
+        <button role="tab" aria-selected={tab === 'info'} aria-pressed={tab === 'info'} onClick={() => setTab('info')}>Details</button>
+        <button role="tab" aria-selected={tab === 'notes'} aria-pressed={tab === 'notes'} onClick={() => setTab('notes')}>
+          Knowledge notes{notes.length > 0 && <span className="info-count">{notes.length}</span>}
+        </button>
+      </div>
       <div className="info-body">
-        {selected ? (
+        {tab === 'info' && (selected ? (
           <>
-            {backLabel !== null && <button className="info-back" onClick={onBack}>← Back to {backLabel}</button>}
+            {backLabel !== null && <button className="info-back" onClick={onBack}><ArrowLeft className="ic" size={14} /> Back to {backLabel}</button>}
             <div className="info-part">
               <strong>{label(selected)}</strong>
               <code>{selected.name}</code>
-              <button className="info-isolate" onClick={() => onIsolate(selected)}>View isolated</button>
+              <button className="info-isolate" onClick={() => onIsolate(selected)}><Maximize2 className="ic" size={13} /> View isolated</button>
             </div>
             <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />
           </>
         ) : (
-          <label>Name
-            <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
-          </label>
+          <>
+            <label>Name
+              <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
+            </label>
+            <dl className="facts">
+              <dt>Main parts</dt><dd>{stats.main}</dd>
+              <dt>Unique parts</dt><dd>{stats.unique}</dd>
+            </dl>
+          </>
+        ))}
+        {tab === 'notes' && (
+          <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} names={names} onOpenPart={onOpenPart} onSave={onSaveNote} onRemove={onRemoveNote} />
         )}
-        <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} names={names} onOpenPart={onOpenPart} onSave={onSaveNote} onRemove={onRemoveNote} />
       </div>
-      <div className="info-foot">
-        <dl className="facts">
-          <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
-          <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
-        </dl>
-      </div>
+      {tab === 'notes' && (
+        <div className="info-foot">
+          <dl className="facts">
+            <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
+            <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
+          </dl>
+        </div>
+      )}
     </aside>
   );
 }
