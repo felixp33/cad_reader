@@ -11,6 +11,9 @@ body { margin:0; height:100vh; background:var(--bg); color:var(--fg); font:13px/
 .app { height:100vh; display:grid; grid-template-columns:320px 1fr 300px; grid-template-rows:auto 1fr; }
 .topbar { grid-column:1 / -1; display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
 .topbar-spacer { flex:1; }
+.topbar-title { margin:0 6px; font-size:15px; font-weight:600; }
+.topbar-note { color:var(--dim); margin:0 6px; }
+.topbar select { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:4px 8px; font:inherit; }
 .profile-wrap { position:relative; margin-left:6px; padding-left:8px; border-left:1px solid var(--line); }
 .profile { display:flex; align-items:center; gap:8px; background:none; border-color:transparent; padding:3px 8px 3px 4px; }
 .profile:hover, .profile[aria-expanded="true"] { background:var(--raised); border-color:var(--line); }

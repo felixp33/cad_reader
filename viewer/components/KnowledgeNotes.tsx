@@ -28,7 +28,8 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
   const target = selected?.name ?? MACHINE;
   const [editing, setEditing] = useState<Note | null>(null);
   const [draft, setDraft] = useState(0); // bumped to start a fresh new-note form
-  useEffect(() => setEditing(null), [target]);
+  const [activeId, setActiveId] = useState<string | null>(null); // id of a note created in the form, once saved
+  useEffect(() => { setEditing(null); setActiveId(null); }, [target]);
 
   // Entries by id, and each entry's ancestor ids (so notes on an assembly show up for its parts).
   const { byId, ancestors } = useMemo(() => {
@@ -45,6 +46,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
   const partLabel = (id: string) => (id === MACHINE ? 'Whole machine' : byId.has(id) ? label(byId.get(id)!) : id);
 
   const inheritedFrom = target === MACHINE ? [] : [MACHINE, ...(ancestors.get(target) ?? [])];
+  const beingEdited = editing?.id ?? activeId; // shown in the form, so not repeated in the list
   const direct = notes.filter((n) => n.parts.includes(target));
   const inherited = notes.filter((n) => !n.parts.includes(target) && n.parts.some((p) => inheritedFrom.includes(p)));
 
@@ -81,9 +83,10 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
         initial={editing}
         names={names}
         onSave={onSave}
-        onDone={() => { setEditing(null); setDraft((d) => d + 1); }}
+        onCreated={setActiveId}
+        onDone={() => { setEditing(null); setActiveId(null); setDraft((d) => d + 1); }}
       />
-      {direct.map((n) => card(n))}
+      {direct.filter((n) => n.id !== beingEdited).map((n) => card(n))}
       {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
       {inherited.map((n) => card(n, partLabel(n.parts.find((p) => inheritedFrom.includes(p))!)))}
     </section>
@@ -94,17 +97,19 @@ const overlaps = (a: Mention, b: Mention) => a.start < b.end && b.start < a.end;
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-// Edits a new or existing note. Changes are saved automatically shortly after typing/dictation pauses,
-// and on leaving the form; the first save of a new note creates it, later ones update it.
-function NoteForm({ target, initial, names, onSave, onDone }: {
+// Edits a new or existing note. A new note is only created when the user saves it; from then on
+// (and for existing notes) changes are saved automatically shortly after typing/dictation pauses.
+function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   target: string; initial: Note | null; names: Record<string, string>;
-  onSave: (n: NoteInput) => Promise<Note>; onDone: () => void;
+  onSave: (n: NoteInput) => Promise<Note>; onCreated: (id: string) => void; onDone: () => void;
 }) {
   const [text, setText] = useState(initial?.text ?? '');
   const links = initial?.parts ?? [target]; // a note is about what was selected when it was written
   const user = useUser();
   const author = initial?.author || user.name;
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [created, setCreated] = useState(!!initial); // autosave only starts after the first (manual) save
+  const armed = useRef(!!initial);
   // Manual corrections to the automatically found links (null = untouched), only offered while the text is unchanged.
   const [overrides, setOverrides] = useState<Mention[] | null>(null);
   const textSame = !!initial && text.trim() === initial.text;
@@ -125,24 +130,28 @@ function NoteForm({ target, initial, names, onSave, onDone }: {
 
   const flush = useCallback(() => {
     queue.current = queue.current.then(async () => {
-      const input = latest.current;
+      const input = armed.current ? latest.current : null;
       const key = input && JSON.stringify([input.text.trim(), input.overrides ?? null]);
       if (!input || key === lastSaved.current) return;
       setSaveState('saving');
       try {
         const saved = await onSave({ ...input, id: id.current });
         id.current = saved.id;
+        setCreated(true);
+        onCreated(saved.id);
         lastSaved.current = key!;
         setSaveState('saved');
       } catch { setSaveState('error'); }
     });
-  }, [onSave]);
+  }, [onSave, onCreated]);
 
   useEffect(() => {
     const t = setTimeout(flush, AUTOSAVE_MS);
     return () => clearTimeout(t);
   }, [text, overrides, flush]);
   useEffect(() => () => flush(), [flush]); // save pending changes when the form goes away
+
+  const create = () => { armed.current = true; flush(); };
 
   const done = () => {
     if (dictation.listening) dictation.toggle();
@@ -186,7 +195,9 @@ function NoteForm({ target, initial, names, onSave, onDone }: {
         <span className={`kn-save${saveState === 'error' ? ' err' : ''}`}>
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? "Couldn't save — retrying on next change" : ''}
         </span>
-        {(initial || saveState !== 'idle') && <button onClick={done}>{initial ? 'Done' : 'New note'}</button>}
+        {created
+          ? <button onClick={done}>Done</button>
+          : <button onClick={create} disabled={!latest.current || saveState === 'saving'}>Save note</button>}
       </div>
     </div>
   );

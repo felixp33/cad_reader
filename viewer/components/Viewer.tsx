@@ -7,8 +7,7 @@ import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
 import { usePanelWidths } from '@/lib/usePanelWidths';
 import { cssColor, subscribeTheme } from '@/lib/theme';
-import Settings from './Settings';
-import Profile from './Profile';
+import TopBar from './TopBar';
 import Link from 'next/link';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
@@ -191,19 +190,12 @@ export default function Viewer() {
 
   return (
     <div className="app" style={{ gridTemplateColumns: `${widths.left}px 1fr ${widths.right}px` }}>
-      <header className="topbar">
-        <Link className="btn icon-btn" href="/" title="Library" aria-label="Library">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h5v-6h4v6h5V10" />
-          </svg>
-        </Link>
-        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts</Link>
-        <span className="topbar-spacer" />
+      <TopBar actions={<>
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
-        <Settings />
-        <Profile />
-      </header>
+      </>}>
+        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts</Link>
+      </TopBar>
       <aside>
         <h2>Project models</h2>
         <div className="models">

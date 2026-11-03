@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
+import TopBar from './TopBar';
 
 type ModelFile = { path: string; size: number };
 type Preview = { url?: string; state: 'loading' | 'ready' | 'error'; message?: string };
@@ -46,10 +47,10 @@ export default function Library() {
 
   return (
     <div className="library">
-      <header className="naming-head">
-        <h1>Machines</h1>
-        <span className="naming-progress">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
-      </header>
+      <TopBar>
+        <h1 className="topbar-title">Machines</h1>
+        <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
+      </TopBar>
       {models === null && <div className="naming-empty">Loading…</div>}
       {models?.length === 0 && <div className="naming-empty">No .stp/.step files found in the project.</div>}
       <div className="grid">

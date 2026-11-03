@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
 import PartCanvas from './PartCanvas';
+import TopBar from './TopBar';
 
 type ModelFile = { path: string; size: number };
 
@@ -98,16 +98,14 @@ export default function Naming() {
 
   return (
     <div className="naming">
-      <header className="naming-head">
-        <Link className="btn" href="/">← Library</Link>
-        <h1>Name parts</h1>
+      <TopBar actions={<span className="topbar-note">{parts.length ? `${named} / ${parts.length} named` : ''}</span>}>
+        <h1 className="topbar-title">Name parts</h1>
         {models.length > 1 && (
           <select value={modelPath ?? ''} onChange={(e) => { flush(); setModelPath(e.target.value); }}>
             {models.map((m) => <option key={m.path} value={m.path}>{m.path.split('/').pop()}</option>)}
           </select>
         )}
-        <span className="naming-progress">{parts.length ? `${named} / ${parts.length} named` : ''}</span>
-      </header>
+      </TopBar>
 
       {parts.length === 0 ? (
         <div className="naming-empty">{status}</div>
