@@ -190,7 +190,7 @@ export default function Viewer() {
 
   return (
     <div className="app" style={{ gridTemplateColumns: `${widths.left}px 1fr ${widths.right}px` }}>
-      <TopBar actions={<>
+      <TopBar search={{ value: filter, onChange: setFilter, placeholder: 'Search parts…' }} actions={<>
         <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
         <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
       </>}>
@@ -207,7 +207,6 @@ export default function Viewer() {
           ))}
         </div>
         <h2>Assembly</h2>
-        <input className="filter" placeholder="Filter parts…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <div className="tree">
           {root && <TreeNode entry={root} depth={0} filter={filter.toLowerCase()} selected={selected} onSelect={select} onIsolate={setIsolated} labelOf={labelOf} noteCount={noteCount} />}
         </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createControls } from '@/lib/controls';
 import { frameObject } from '@/lib/frame';
-import type { Entry } from '@/lib/scene';
+import { isZUp, type Entry } from '@/lib/scene';
 import { cssColor, subscribeTheme } from '@/lib/theme';
 
 // A canvas with its own renderer showing a single part/sub-assembly on its own.
@@ -44,7 +44,7 @@ export default function PartCanvas({ entry, resetRef, wireframe = false }: {
     });
     materials.current = mats;
     const holder = new THREE.Group();
-    holder.rotation.x = -Math.PI / 2; // STEP is Z-up
+    if (isZUp(entry.group)) holder.rotation.x = -Math.PI / 2; // Z-up sources get turned upright
     holder.add(clone);
     scene.add(holder);
 

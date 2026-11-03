@@ -5,6 +5,18 @@ import { CACHE_DIR, cacheId, resolveModel } from '@/lib/project';
 
 export const dynamic = 'force-dynamic';
 
+// Inventor and SolidWorks export STEP in a Y-up frame; most other sources (and the other formats here) are Z-up.
+// Cached meshes carry no axis info, so this is read from the source file's header each time.
+function upAxisOf(file: string): 'y' | 'z' {
+  if (!/\.(stp|step)$/i.test(file)) return 'z';
+  const fd = fs.openSync(file, 'r');
+  try {
+    const buf = Buffer.alloc(8192);
+    const head = buf.toString('latin1', 0, fs.readSync(fd, buf, 0, buf.length, 0));
+    return /originating_system[\s\S]{0,40}?'[^']*(inventor|solidworks)/i.test(head) ? 'y' : 'z';
+  } finally { fs.closeSync(fd); }
+}
+
 const running = new Map<string, Promise<void>>();
 
 // Converts a STEP file to mesh files (cached by path + mtime) and returns the cache id.
@@ -28,5 +40,5 @@ export async function POST(req: Request) {
     }
     try { await running.get(id); } catch (e) { return new Response((e as Error).message, { status: 500 }); }
   }
-  return Response.json({ id });
+  return Response.json({ id, up: upAxisOf(file) });
 }

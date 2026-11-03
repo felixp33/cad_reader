@@ -5,9 +5,9 @@ const VIEW_DIR = new THREE.Vector3(1.4, 0.6, 0.5).normalize();
 
 // Positions the camera so the whole object fits in view for the given aspect ratio.
 // `viewDir` is the direction from the object towards the camera. Returns the point to orbit around and the bounding radius.
-export function frameObject(camera: THREE.PerspectiveCamera, object: THREE.Object3D, aspect: number, viewDir: THREE.Vector3 = VIEW_DIR) {
-  object.updateMatrixWorld(true); // world matrices are stale until the first render
-  const sphere = new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere());
+export function frameObject(camera: THREE.PerspectiveCamera, object: THREE.Object3D | THREE.Box3, aspect: number, viewDir: THREE.Vector3 = VIEW_DIR) {
+  if (!(object instanceof THREE.Box3)) object.updateMatrixWorld(true); // world matrices are stale until the first render
+  const sphere = (object instanceof THREE.Box3 ? object : new THREE.Box3().setFromObject(object)).getBoundingSphere(new THREE.Sphere());
   const radius = Math.max(sphere.radius, 1e-3);
   const halfV = THREE.MathUtils.degToRad(camera.fov) / 2;
   const halfH = Math.atan(Math.tan(halfV) * aspect);

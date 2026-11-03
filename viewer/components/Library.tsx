@@ -7,6 +7,18 @@ import { renderThumbnail } from '@/lib/thumbnail';
 import AddFilesDialog from './AddFilesDialog';
 import TopBar from './TopBar';
 
+const FEATURES = [
+  { href: '/section', label: 'Section view', hint: 'Cut through a machine' },
+  { href: '/describe', label: 'Part finder', hint: 'Type or speak, see only those parts' },
+];
+const KNOWLEDGE = [
+  { href: '/knowledge/catalog', label: 'Catalog', hint: 'Look things up' },
+  { href: '/knowledge/applicability', label: 'What applies?', hint: 'Answer a few questions' },
+  { href: '/knowledge/timeline', label: 'Timeline', hint: 'What changes, and when' },
+  { href: '/knowledge/graph', label: 'Relations', hint: 'How they connect' },
+  { href: '/knowledge/capture', label: 'Capture', hint: 'Dictate now, sort later' },
+];
+
 type ModelFile = { path: string; size: number };
 type Preview = { url?: string; state: 'loading' | 'ready' | 'error'; message?: string };
 
@@ -16,6 +28,7 @@ export default function Library() {
 
   const [reload, setReload] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState('');
 
   const setPreview = (path: string, p: Preview) => setPreviews((prev) => ({ ...prev, [path]: p }));
 
@@ -49,17 +62,27 @@ export default function Library() {
     return () => { cancelled = true; };
   }, [reload]);
 
+  const q = query.trim().toLowerCase();
+  const shown = models?.filter((m) => !q || m.path.toLowerCase().includes(q));
+
   return (
     <div className="library">
       {adding && <AddFilesDialog onClose={() => setAdding(false)} onUploaded={() => setReload((n) => n + 1)} />}
-      <TopBar actions={<button className="btn" onClick={() => setAdding(true)}>+ Add</button>}>
+      <TopBar search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={<button className="btn" onClick={() => setAdding(true)}>+ Add</button>}>
         <h1 className="topbar-title">Machines</h1>
         <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
       </TopBar>
+      <nav className="feature-row" aria-label="Tools">
+        {FEATURES.map((f) => <Link key={f.href} className="feature" href={f.href}><strong>{f.label}</strong><small>{f.hint}</small></Link>)}
+        <span className="feature-sep" aria-hidden />
+        <span className="feature-group">Knowledge</span>
+        {KNOWLEDGE.map((f) => <Link key={f.href} className="feature" href={f.href}><strong>{f.label}</strong><small>{f.hint}</small></Link>)}
+      </nav>
       {models === null && <div className="naming-empty">Loading…</div>}
       {models?.length === 0 && <div className="naming-empty">No 3D files found. Use “Add” to import some.</div>}
+      {models && models.length > 0 && shown?.length === 0 && <div className="naming-empty">No machines match “{query}”.</div>}
       <div className="grid">
-        {models?.map((m) => {
+        {shown?.map((m) => {
           const pv = previews[m.path];
           const q = encodeURIComponent(m.path);
           return (

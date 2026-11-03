@@ -29,19 +29,26 @@ export function buildEntry(node: MeshNode, model: MeshModel, bin: ArrayBuffer, g
 }
 
 // Converts (cached) and loads a STEP file into a three.js group plus its entry tree.
-// The group is rotated from STEP's Z-up to three.js' Y-up.
+// The group is rotated to three.js' Y-up when the source is Z-up; `holder.userData.up` records the source axis.
 export async function fetchScene(path: string, onStatus: (s: string) => void = () => {}) {
   const name = path.split('/').pop()!;
   onStatus(`Converting ${name} (first load can take a minute; cached afterwards)…`);
   const res = await fetch('/api/convert', { method: 'POST', body: JSON.stringify({ path }) });
   if (!res.ok) throw new Error(await res.text());
-  const { id } = await res.json();
+  const { id, up } = (await res.json()) as { id: string; up: 'y' | 'z' };
   onStatus('Loading mesh…');
   const { model, bin } = await loadMesh(id);
   const holder = new THREE.Group();
-  holder.rotation.x = -Math.PI / 2;
+  holder.userData.up = up;
+  if (up === 'z') holder.rotation.x = -Math.PI / 2;
   const roots = model.roots.map((r) => buildEntry(r, model, bin, new Map(), holder));
   return { name, model, holder, roots };
+}
+
+// Whether the scene a group belongs to was loaded from a Z-up source (and therefore carries the correcting rotation).
+export function isZUp(obj: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = obj; o; o = o.parent) if (o.userData.up) return o.userData.up === 'z';
+  return true;
 }
 
 // The machine is the first node that branches; its children are the parts to name.
