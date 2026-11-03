@@ -4,14 +4,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
-import { BookOpen, History, ListChecks, Mic, Network, Plus, ScanSearch, Slice } from 'lucide-react';
+import { BookOpen, History, ListChecks, Mic, Network, Plus, Slice } from 'lucide-react';
 import AddFilesDialog from './AddFilesDialog';
 import { Skeleton, SkeletonCards } from './Skeleton';
 import TopBar from './TopBar';
 
 const FEATURES = [
-  { href: '/section', label: 'Section view', hint: 'Cut through a machine', icon: Slice },
-  { href: '/describe', label: 'Part finder', hint: 'Type or speak, see only those parts', icon: ScanSearch },
+  { href: '/section', label: 'Slice', hint: 'Cut through a machine', icon: Slice },
 ];
 const KNOWLEDGE = [
   { href: '/knowledge/catalog', label: 'Catalog', hint: 'Look things up', icon: BookOpen },

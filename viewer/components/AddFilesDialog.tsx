@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, FolderOpen, Upload, X } from 'lucide-react';
 
 const ACCEPT = '.stp,.step,.igs,.iges,.brep,.brp,.stl';
@@ -70,7 +71,7 @@ export default function AddFilesDialog({ onClose, onUploaded }: { onClose: () =>
     upload(items);
   };
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={() => !busy && onClose()}>
       <div className="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="add-title" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -104,6 +105,7 @@ export default function AddFilesDialog({ onClose, onUploaded }: { onClose: () =>
           <input ref={folderInput} type="file" hidden {...({ webkitdirectory: '' } as object)} onChange={(e) => { fromInput(e.target.files); e.target.value = ''; }} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

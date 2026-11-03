@@ -27,4 +27,10 @@ export type Note = {
   indexedAt?: string; // when `mentions` were last computed; older than updatedAt means the indexer still has to run
 };
 
+// The parts a note is about: the ones it is attached to plus those its text clearly names (an ambiguous word is left out).
+export const notePartIds = (n: Note): string[] => [...new Set([
+  ...n.parts.filter((p) => p !== MACHINE),
+  ...(n.mentions ?? []).filter((m) => m.parts.length === 1).map((m) => m.parts[0]),
+])];
+
 export const isStale = (n: Note) => !n.indexedAt || n.indexedAt < n.updatedAt;

@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Pencil, Square, Trash2, X } from 'lucide-react';
+import { Eye, Mic, Pencil, ScanSearch, Square, Trash2, X } from 'lucide-react';
 import { useUser } from '@/lib/user';
 import type { Entry } from '@/lib/scene';
-import { MACHINE, NOTE_TYPES, type Mention, type Note, type NoteType } from '@/lib/noteTypes';
+import { MACHINE, NOTE_TYPES, notePartIds, type Mention, type Note, type NoteType } from '@/lib/noteTypes';
 import type { NoteInput } from '@/lib/useNotes';
 import { useDictation } from '@/lib/useDictation';
+import AuthorPopup from './AuthorPopup';
 import LinkedText from './LinkedText';
 
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
   label: (e: Entry) => string;
   names: Record<string, string>;
   onOpenPart: (id: string) => void;
+  focusNote: string | null; // note whose parts are currently the only ones shown in 3D
+  onShowParts: (noteId: string | null, ids: string[]) => void;
   onSave: (n: NoteInput) => Promise<Note>;
   onRemove: (id: string) => Promise<void>;
 };
@@ -25,9 +28,10 @@ const AUTOSAVE_MS = 800;
 const typeLabel = (t: NoteType) => NOTE_TYPES.find((x) => x.id === t)?.label ?? t;
 
 // Capture + list of expert knowledge for the machine or the selected part.
-export default function KnowledgeNotes({ notes, root, selected, label, names, onOpenPart, onSave, onRemove }: Props) {
+export default function KnowledgeNotes({ notes, root, selected, label, names, onOpenPart, focusNote, onShowParts, onSave, onRemove }: Props) {
   const target = selected?.name ?? MACHINE;
   const [editing, setEditing] = useState<Note | null>(null);
+  const [authorOpen, setAuthorOpen] = useState<string | null>(null);
   const [draft, setDraft] = useState(0); // bumped to start a fresh new-note form
   const [activeId, setActiveId] = useState<string | null>(null); // id of a note created in the form, once saved
   useEffect(() => { setEditing(null); setActiveId(null); }, [target]);
@@ -64,13 +68,20 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
         </div>
       )}
       <div className="kn-foot">
-        <small>{n.author || 'Unknown'} · {new Date(n.updatedAt).toLocaleDateString()}</small>
-        {!from && (
-          <span>
+        <small>
+          {n.author ? <button className="author-link" onClick={() => setAuthorOpen(n.author)}>{n.author}</button> : 'Unknown'} · {new Date(n.updatedAt).toLocaleDateString()}
+        </small>
+        <span>
+          {notePartIds(n).length > 0 && (
+            focusNote === n.id
+              ? <button className="show-parts on" onClick={() => onShowParts(null, [])}><Eye size={13} /> Show all</button>
+              : <button className="show-parts" title="Show only the parts this note is about" onClick={() => onShowParts(n.id, notePartIds(n))}><ScanSearch size={13} /> Show parts</button>
+          )}
+          {!from && (<>
             <button className="icon" title="Edit note" aria-label="Edit note" onClick={() => setEditing(n)}><Pencil size={14} /></button>
             <button className="icon" title="Delete note" aria-label="Delete note" onClick={() => { if (confirm('Delete this note?')) onRemove(n.id); }}><Trash2 size={14} /></button>
-          </span>
-        )}
+          </>)}
+        </span>
       </div>
     </div>
   );
@@ -90,6 +101,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
       {direct.filter((n) => n.id !== beingEdited).map((n) => card(n))}
       {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
       {inherited.map((n) => card(n, partLabel(n.parts.find((p) => inheritedFrom.includes(p))!)))}
+      {authorOpen && <AuthorPopup name={authorOpen} onClose={() => setAuthorOpen(null)} />}
     </section>
   );
 }

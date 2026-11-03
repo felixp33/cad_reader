@@ -9,6 +9,7 @@ import { usePanelWidths } from '@/lib/usePanelWidths';
 import { cssColor, subscribeTheme } from '@/lib/theme';
 import TopBar from './TopBar';
 import Link from 'next/link';
+import { RotateCcw, Slice, Tag, X } from 'lucide-react';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
 import { useNotes } from '@/lib/useNotes';
@@ -25,7 +26,7 @@ export default function Viewer() {
   const [models, setModels] = useState<ModelFile[]>([]);
   const [root, setRoot] = useState<Entry | null>(null);
   const [selected, setSelected] = useState<Entry | null>(null);
-  const [status, setStatus] = useState('Pick a model to load.');
+  const [status, setStatus] = useState('');
   const [filter, setFilter] = useState('');
   const [wire, setWire] = useState(false);
   const [currentModel, setCurrentModel] = useState<string | null>(null);
@@ -37,6 +38,8 @@ export default function Viewer() {
   const [showGiven, setShowGiven] = useState(true);
   const [isolated, setIsolated] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(false);
+  const [focusNote, setFocusNote] = useState<string | null>(null); // note whose parts are the only ones shown
+  const [focusCount, setFocusCount] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -85,7 +88,7 @@ export default function Viewer() {
   const loadModel = async (path: string) => {
     setLoading(true);
     try {
-      const { name, model, holder, roots } = await fetchScene(path, setStatus);
+      const { name, holder, roots } = await fetchScene(path, setStatus);
       setCurrentModel(path);
       const q = '?model=' + encodeURIComponent(path);
       setNames(await fetch('/api/names' + q).then((r) => r.json()).catch(() => ({})));
@@ -97,9 +100,9 @@ export default function Viewer() {
       setSelected(null);
       setHistory([]);
       setIsolated(null);
+      setFocusNote(null);
       fit();
-      const tris = model.protos.flat().reduce((n, c) => n + c.triangles, 0);
-      setStatus(`${name}: ${model.protos.length} unique parts, ${tris.toLocaleString()} triangles`);
+      setStatus('');
     } catch (e) {
       setStatus(`Failed: ${(e as Error).message}`);
     } finally {
@@ -118,11 +121,6 @@ export default function Viewer() {
     selected?.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0); });
     entry.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissive.setHex(0x1a4a80); });
     setSelected(entry);
-    const box = new THREE.Box3().setFromObject(entry.group);
-    if (!box.isEmpty()) {
-      const s = box.getSize(new THREE.Vector3());
-      setStatus(`${labelOf(entry)} — ${s.x.toFixed(1)} × ${s.y.toFixed(1)} × ${s.z.toFixed(1)}`);
-    }
   };
 
   // Flies the camera to an entry, keeping the current viewing direction.
@@ -160,6 +158,31 @@ export default function Viewer() {
     if (prev) { select(prev); focus(prev); } else clearSelection();
   };
 
+  // Shows only the given parts (by id) and frames them; null shows everything again.
+  const showParts = (noteId: string | null, ids: string[]) => {
+    const { model, camera, controls, canvas } = three.current;
+    if (!model) return;
+    const meshes: THREE.Mesh[] = [];
+    model.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    const entries = noteId ? ids.map((id) => entryById.get(id)).filter((e): e is Entry => !!e) : [];
+    if (noteId && entries.length === 0) return;
+    if (!noteId) { meshes.forEach((m) => { m.visible = true; }); setFocusNote(null); return; }
+    const keep = new Set<THREE.Object3D>();
+    entries.forEach((e) => e.group.traverse((o) => keep.add(o)));
+    meshes.forEach((m) => { m.visible = keep.has(m); });
+    const box = new THREE.Box3();
+    entries.forEach((e) => { e.group.updateWorldMatrix(true, true); box.union(new THREE.Box3().setFromObject(e.group)); });
+    const dir = camera.position.clone().sub(controls.target);
+    const { center, radius } = frameObject(camera, box, canvas.clientWidth / canvas.clientHeight, dir.lengthSq() ? dir.normalize() : undefined);
+    camera.far = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere()).radius * 40;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.minDistance = radius * 0.05;
+    controls.update();
+    setFocusNote(noteId);
+    setFocusCount(entries.length);
+  };
+
   const savePartName = async (id: string, name: string) => {
     if ((names[id] ?? '') === name) return;
     setNames((n) => { const next = { ...n }; if (name) next[id] = name; else delete next[id]; return next; });
@@ -187,16 +210,13 @@ export default function Viewer() {
   const mainIds = useMemo(() => (root ? firstGeneration([root]).map((e) => e.name) : []), [root]);
 
   // Given (human-readable) name if there is one and the toggle is on, otherwise the part's ID.
+  const modelQuery = currentModel ? '?model=' + encodeURIComponent(currentModel) : '';
+
   const labelOf = (e: Entry) => (showGiven && names[e.name]) || e.name;
 
   return (
     <div className="app" style={{ '--left': `${widths.left}px`, '--right': `${widths.right}px` } as React.CSSProperties}>
-      <TopBar search={{ value: filter, onChange: setFilter, placeholder: 'Search parts…' }} actions={<>
-        <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
-        <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
-      </>}>
-        <Link className="btn" href={currentModel ? `/naming?model=${encodeURIComponent(currentModel)}` : '/naming'}>Name parts</Link>
-      </TopBar>
+      <TopBar search={{ value: filter, onChange: setFilter, placeholder: 'Search parts…' }} />
       <aside>
         <h2>Project models</h2>
         <div className="models">
@@ -217,6 +237,14 @@ export default function Viewer() {
         <div className="resizer left" onPointerDown={startDrag('left')} onDoubleClick={() => resetWidth('left')} role="separator" aria-orientation="vertical" aria-label="Resize assembly column" />
         <div className="resizer right" onPointerDown={startDrag('right')} onDoubleClick={() => resetWidth('right')} role="separator" aria-orientation="vertical" aria-label="Resize information column" />
         <canvas ref={canvasRef} />
+        <div className="toolrow" role="toolbar" aria-label="View tools">
+          <button className="btn" onClick={() => { clearSelection(); showParts(null, []); fit(); }} disabled={!root} title="Frame the whole machine"><RotateCcw className="ic" size={15} /> Reset view</button>
+          <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
+          <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
+          <span className="toolrow-sep" aria-hidden />
+          <Link className="btn" href={`/naming${modelQuery}`}><Tag className="ic" size={15} /> Name parts</Link>
+          <Link className="btn" href={`/section${modelQuery}`}><Slice className="ic" size={15} /> Slice</Link>
+        </div>
         {crumbs.length > 0 && (
           <nav className="crumbs" aria-label="Selected part path">
             {crumbs.map((e, i) => (
@@ -232,9 +260,15 @@ export default function Viewer() {
           </nav>
         )}
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
-        <div className="status">{status}</div>
+        {status && <div className="status status-top">{status}</div>}
+        {focusNote && (
+          <div className="focus-pill">
+            Showing {focusCount} part{focusCount === 1 ? '' : 's'} from a note
+            <button className="btn" onClick={() => showParts(null, [])}><X className="ic" size={14} /> Show all</button>
+          </div>
+        )}
       </main>
-      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} onPartName={savePartName} onOpenPart={openPart} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
+      <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} onPartName={savePartName} onOpenPart={openPart} focusNote={focusNote} onShowParts={showParts} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
   );
 }

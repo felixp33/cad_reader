@@ -72,7 +72,7 @@ export default function Section() {
   return (
     <div className="stage">
       <TopBar actions={<Toggle label="Cut" checked={cut} onChange={setCut} />}>
-        <h1 className="topbar-title">Section view</h1>
+        <h1 className="topbar-title">Slice</h1>
         <select value={model ?? ''} onChange={(e) => setModel(e.target.value)} aria-label="Machine">
           {models.map((m) => <option key={m.path} value={m.path}>{m.path.split('/').pop()}</option>)}
         </select>

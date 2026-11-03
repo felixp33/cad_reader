@@ -4,12 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
 import type { Note } from '@/lib/noteTypes';
 import type { NoteInput } from '@/lib/useNotes';
-import { ArrowLeft, Maximize2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
 import KnowledgeNotes from './KnowledgeNotes';
 
 // Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
 // selected part, and how many main / unique parts have notes.
-export default function InfoPanel({ model, root, mainIds, selected, label, names, onPartName, onOpenPart, backLabel, onBack, onIsolate, title, onTitleChange, notes, onSaveNote, onRemoveNote }: {
+export default function InfoPanel({ model, root, mainIds, selected, label, names, onPartName, onOpenPart, focusNote, onShowParts, backLabel, onBack, onIsolate, title, onTitleChange, notes, onSaveNote, onRemoveNote }: {
   model: string | null;
   root: Entry | null;
   mainIds: string[];
@@ -18,6 +18,8 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   names: Record<string, string>;
   onPartName: (id: string, name: string) => void;
   onOpenPart: (id: string) => void;
+  focusNote: string | null;
+  onShowParts: (noteId: string | null, ids: string[]) => void;
   backLabel: string | null; // set when the selection was reached by following a link in a note
   onBack: () => void;
   onIsolate: (e: Entry) => void;
@@ -28,7 +30,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   onRemoveNote: (id: string) => Promise<void>;
 }) {
   const [saved, setSaved] = useState(true);
-  const [tab, setTab] = useState<'info' | 'notes'>('info');
+  const [open, setOpen] = useState(true); // general information card expanded
   const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -79,54 +81,57 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
     };
   }, [root, mainIds, notes]);
 
-  if (!model) return <aside className="info"><h2>Information</h2><div className="info-empty">Load a model to see its information.</div></aside>;
+  if (!model) return <div className="info-col"><section className="info info-card"><h2 className="info-title">Information</h2><div className="info-empty">Load a model to see its information.</div></section></div>;
 
   return (
-    <aside className="info">
-      <h2>{selected ? 'Part' : 'Machine'} {saved ? '' : '· saving…'}</h2>
-      <div className="info-tabs segmented" role="tablist" aria-label="Information sections">
-        <button role="tab" aria-selected={tab === 'info'} aria-pressed={tab === 'info'} onClick={() => setTab('info')}>Details</button>
-        <button role="tab" aria-selected={tab === 'notes'} aria-pressed={tab === 'notes'} onClick={() => setTab('notes')}>
-          Knowledge notes{notes.length > 0 && <span className="info-count">{notes.length}</span>}
-        </button>
-      </div>
-      <div className="info-body">
-        {tab === 'info' && (selected ? (
-          <>
-            {backLabel !== null && <button className="info-back" onClick={onBack}><ArrowLeft className="ic" size={14} /> Back to {backLabel}</button>}
-            <div className="info-part">
-              <strong>{label(selected)}</strong>
-              <code>{selected.name}</code>
-              <button className="info-isolate" onClick={() => onIsolate(selected)}><Maximize2 className="ic" size={13} /> View isolated</button>
-            </div>
-            <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />
-          </>
-        ) : (
-          <>
-            <label>Name
-              <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
-            </label>
-            <dl className="facts">
-              <dt>Main parts</dt><dd>{stats.main}</dd>
-              <dt>Unique parts</dt><dd>{stats.unique}</dd>
-            </dl>
-          </>
-        ))}
-        {tab === 'notes' && (
-          <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} names={names} onOpenPart={onOpenPart} onSave={onSaveNote} onRemove={onRemoveNote} />
-        )}
-      </div>
-      {tab === 'notes' && (
-        <div className="info-foot">
-          <dl className="facts">
-            <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
-            <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
-          </dl>
+    <div className="info-col">
+      <section className="info info-card">
+        <div className="info-toggle">
+          <span>General information</span>
+          <small>{selected ? 'Part' : 'Machine'}{saved ? '' : ' · saving…'}</small>
+          <button className="icon-btn" aria-expanded={open} aria-label={open ? 'Collapse general information' : 'Expand general information'} title={open ? 'Collapse' : 'Expand'} onClick={() => setOpen((o) => !o)}>
+            {open ? <ChevronUp className="ic" size={16} /> : <ChevronDown className="ic" size={16} />}
+          </button>
         </div>
-      )}
-    </aside>
+        {open && (
+          <div className="info-body">
+            {selected ? (
+              <>
+                {backLabel !== null && <button className="info-back" onClick={onBack}><ArrowLeft className="ic" size={14} /> Back to {backLabel}</button>}
+                <div className="info-part">
+                  <strong>{label(selected)}</strong>
+                  <code>{selected.name}</code>
+                  <button className="info-isolate" onClick={() => onIsolate(selected)}><Maximize2 className="ic" size={13} /> View isolated</button>
+                </div>
+                <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />
+              </>
+            ) : (
+              <>
+                <label>Name
+                  <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
+                </label>
+              </>
+            )}
+            <Coverage stats={stats} />
+          </div>
+        )}
+      </section>
+      <section className="info info-card info-notes">
+        <div className="info-body">
+          <KnowledgeNotes notes={notes} root={root} selected={selected} label={label} names={names} onOpenPart={onOpenPart} focusNote={focusNote} onShowParts={onShowParts} onSave={onSaveNote} onRemove={onRemoveNote} />
+        </div>
+      </section>
+    </div>
   );
 }
+
+type Stats = { main: number; mainNoted: number; unique: number; uniqueNoted: number };
+const Coverage = ({ stats }: { stats: Stats }) => (
+  <dl className="facts">
+    <dt>Main parts</dt><dd>{stats.mainNoted} / {stats.main} with notes</dd>
+    <dt>Unique parts</dt><dd>{stats.uniqueNoted} / {stats.unique} with notes</dd>
+  </dl>
+);
 
 // Name of the selected part. The notes' text is matched against it. Autosaves shortly after typing stops.
 function PartNaming({ id, name, onSave }: { id: string; name: string; onSave: (id: string, name: string) => void }) {

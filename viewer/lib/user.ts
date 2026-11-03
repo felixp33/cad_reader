@@ -4,12 +4,16 @@ import { useSyncExternalStore } from 'react';
 
 // Mock accounts until there is real authentication; switch between them from the profile menu.
 // Notes are attributed to the signed-in user's name.
-export type User = { id: string; name: string; role: string };
+export type User = { id: string; name: string; role: string; email: string; retired?: boolean };
 
 export const USERS: User[] = [
-  { id: 'mara', name: 'Mara Lindqvist', role: 'Design engineer' },
-  { id: 'jonas', name: 'Jonas Okafor', role: 'Service technician' },
+  { id: 'mara', name: 'Mara Lindqvist', role: 'Design engineer', email: 'mara.lindqvist@example.com' },
+  { id: 'jonas', name: 'Jonas Okafor', role: 'Service technician', email: 'jonas.okafor@example.com' },
+  { id: 'henrik', name: 'Henrik Brandt', role: 'Former head of design', email: 'henrik.brandt@example.com', retired: true },
 ];
+
+// Notes store only the author's name; this finds the matching account, if there is one.
+export const userByName = (name: string) => USERS.find((u) => u.name === name);
 
 const KEY = 'cad.user';
 const listeners = new Set<() => void>();
