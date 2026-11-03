@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
+import AddFilesDialog from './AddFilesDialog';
 import TopBar from './TopBar';
 
 type ModelFile = { path: string; size: number };
@@ -12,6 +13,9 @@ type Preview = { url?: string; state: 'loading' | 'ready' | 'error'; message?: s
 export default function Library() {
   const [models, setModels] = useState<ModelFile[] | null>(null);
   const [previews, setPreviews] = useState<Record<string, Preview>>({});
+
+  const [reload, setReload] = useState(0);
+  const [adding, setAdding] = useState(false);
 
   const setPreview = (path: string, p: Preview) => setPreviews((prev) => ({ ...prev, [path]: p }));
 
@@ -43,16 +47,17 @@ export default function Library() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [reload]);
 
   return (
     <div className="library">
-      <TopBar>
+      {adding && <AddFilesDialog onClose={() => setAdding(false)} onUploaded={() => setReload((n) => n + 1)} />}
+      <TopBar actions={<button className="btn" onClick={() => setAdding(true)}>+ Add</button>}>
         <h1 className="topbar-title">Machines</h1>
         <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
       </TopBar>
       {models === null && <div className="naming-empty">Loading…</div>}
-      {models?.length === 0 && <div className="naming-empty">No .stp/.step files found in the project.</div>}
+      {models?.length === 0 && <div className="naming-empty">No 3D files found. Use “Add” to import some.</div>}
       <div className="grid">
         {models?.map((m) => {
           const pv = previews[m.path];

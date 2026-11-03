@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
-const VIEW_DIR = new THREE.Vector3(1, 0.8, 1.2).normalize();
+// This machine's door/control face points along +X (three.js axes), so look at it mostly head-on, from slightly aside and above.
+const VIEW_DIR = new THREE.Vector3(1.4, 0.6, 0.5).normalize();
 
 // Positions the camera so the whole object fits in view for the given aspect ratio.
 // `viewDir` is the direction from the object towards the camera. Returns the point to orbit around and the bounding radius.

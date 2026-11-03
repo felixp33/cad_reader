@@ -19,4 +19,4 @@ export function subscribeTheme(cb: () => void) {
 }
 
 // A color token (e.g. '--canvas-bg') as currently themed, for the WebGL canvases.
-export const cssColor = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#14171c';
+export const cssColor = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#25282d';

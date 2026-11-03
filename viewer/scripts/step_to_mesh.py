@@ -1,4 +1,4 @@
-"""Convert a STEP file to a viewer-friendly mesh: <out>/model.json (assembly tree + part meshes) and
+"""Convert a STEP / IGES / BREP / STL file to a viewer-friendly mesh: <out>/model.json (assembly tree + part meshes) and
 <out>/model.bin (float32 positions / normals, uint32 indices). Parts are meshed once and instanced.
 
 Usage: step_to_mesh.py <input.stp> <out_dir> [linear_deflection_mm]
@@ -10,7 +10,12 @@ from pathlib import Path
 import numpy as np
 from OCP.BRep import BRep_Tool
 from OCP.BRepMesh import BRepMesh_IncrementalMesh
+from OCP.BRep import BRep_Builder
+from OCP.BRepTools import BRepTools
 from OCP.IFSelect import IFSelect_RetDone
+from OCP.IGESCAFControl import IGESCAFControl_Reader
+from OCP.StlAPI import StlAPI_Reader
+from OCP.TopoDS import TopoDS_Shape
 from OCP.Quantity import Quantity_Color
 from OCP.STEPCAFControl import STEPCAFControl_Reader
 from OCP.TCollection import TCollection_ExtendedString
@@ -29,13 +34,23 @@ lin_defl = float(sys.argv[3]) if len(sys.argv) > 3 else 0.2
 out_dir.mkdir(parents=True, exist_ok=True)
 
 doc = TDocStd_Document(TCollection_ExtendedString("doc"))
-reader = STEPCAFControl_Reader()
-reader.SetColorMode(True)
-reader.SetNameMode(True)
-if reader.ReadFile(str(src)) != IFSelect_RetDone:
-    sys.exit("could not read STEP file")
-print("transferring…", flush=True)
-reader.Transfer(doc)
+ext = src.suffix.lower()
+shape_only = None
+if ext in (".stp", ".step", ".igs", ".iges"):
+    reader = STEPCAFControl_Reader() if ext in (".stp", ".step") else IGESCAFControl_Reader()
+    reader.SetColorMode(True)
+    reader.SetNameMode(True)
+    if reader.ReadFile(str(src)) != IFSelect_RetDone:
+        sys.exit("could not read file")
+    print("transferring…", flush=True)
+    reader.Transfer(doc)
+else:  # plain shape formats: wrap the single shape in the document
+    shape_only = TopoDS_Shape()
+    if ext == ".stl":
+        if not StlAPI_Reader().Read(shape_only, str(src)):
+            sys.exit("could not read STL file")
+    elif not BRepTools.Read_s(shape_only, str(src), BRep_Builder()):
+        sys.exit("could not read BREP file")
 
 main = doc.Main()
 shapes = XCAFDoc_DocumentTool.ShapeTool_s(main)
@@ -174,6 +189,9 @@ def build_node(label, loc, fallback_color):
     return node
 
 
+if shape_only is not None:
+    shapes.AddShape(shape_only, False)
+    shapes.UpdateAssemblies()
 free = TDF_LabelSequence()
 shapes.GetFreeShapes(free)
 roots = [build_node(free.Value(i), None, None) for i in range(1, free.Length() + 1)]

@@ -4,7 +4,8 @@ import path from 'node:path';
 
 // The viewer lives in <project>/viewer; models are searched in the project root.
 export const PROJECT_DIR = path.resolve(process.cwd(), '..');
-const MODEL_EXTS = new Set(['.stp', '.step']);
+export const MODEL_EXTS = new Set(['.stp', '.step', '.igs', '.iges', '.brep', '.brp', '.stl']);
+export const UPLOAD_DIR = 'uploads';
 const SKIP = new Set(['viewer', 'node_modules']);
 
 export type ModelFile = { path: string; size: number };

@@ -1,11 +1,12 @@
-:root { color-scheme:dark; --bg:#14171c; --panel:#1c2027; --line:#2b313a; --fg:#d7dce3; --dim:#8a93a0; --accent:#4da3ff;
-  --raised:#252b34; --sel:#1f3a58; --canvas-bg:#14171c; --canvas-bg2:#1a1e25; --scrim:rgba(28,32,39,.85); --shadow:rgba(0,0,0,.5);
-  --accent-soft:rgba(77,163,255,.16); --err:#e5736a; --on-accent:#06121f; --switch-off:#3a424e;
-  --tag:#2c3440; --tag-failed:#5a2b27; --tag-constraint:#58451f; --tag-predecessor:#3d3358; --tag-tip:#27472f; }
-:root[data-theme="light"] { color-scheme:light; --bg:#f3f5f8; --panel:#ffffff; --line:#d5dae2; --fg:#1d2330; --dim:#5f6877; --accent:#1f6fd1;
-  --raised:#eceff4; --sel:#d6e6fa; --canvas-bg:#e8ebf0; --canvas-bg2:#e1e5ec; --scrim:rgba(255,255,255,.88); --shadow:rgba(30,40,60,.22);
-  --accent-soft:rgba(31,111,209,.14); --err:#c0392b; --on-accent:#fff; --switch-off:#b9c1ce;
-  --tag:#e3e7ed; --tag-failed:#f6d9d6; --tag-constraint:#f4e6c8; --tag-predecessor:#e6def6; --tag-tip:#d7efdc; }
+:root { /* Bosch palette: Spanish Red #E00420, Faded White #DFE2E4, Shimmer Silver #B6BBBE, Silver Steel #9DA5A8, Dark Grey Camo #737A80, Gunmetal Gray #31343A */
+  color-scheme:dark; --bg:#25282d; --panel:#31343a; --line:#4a4f56; --fg:#dfe2e4; --dim:#9da5a8; --accent:#e00420;
+  --raised:#3b3f46; --sel:#512a31; --canvas-bg:#25282d; --canvas-bg2:#2c2f35; --scrim:rgba(49,52,58,.85); --shadow:rgba(0,0,0,.5);
+  --accent-soft:rgba(224,4,32,.18); --err:#ff6b7a; --on-accent:#fff; --switch-off:#5a6068;
+  --tag:#40444b; --tag-failed:#5a2b27; --tag-constraint:#58451f; --tag-predecessor:#3d3358; --tag-tip:#27472f; }
+:root[data-theme="light"] { color-scheme:light; --bg:#dfe2e4; --panel:#f4f5f6; --line:#b6bbbe; --fg:#31343a; --dim:#737a80; --accent:#e00420;
+  --raised:#eceeef; --sel:#f6d3d8; --canvas-bg:#d3d7da; --canvas-bg2:#cbd0d3; --scrim:rgba(244,245,246,.88); --shadow:rgba(49,52,58,.25);
+  --accent-soft:rgba(224,4,32,.12); --err:#b8031a; --on-accent:#fff; --switch-off:#9da5a8;
+  --tag:#e3e6e8; --tag-failed:#f6d9d6; --tag-constraint:#f4e6c8; --tag-predecessor:#e6def6; --tag-tip:#d7efdc; }
 * { box-sizing: border-box; }
 body { margin:0; height:100vh; background:var(--bg); color:var(--fg); font:13px/1.4 -apple-system, system-ui, sans-serif; }
 .app { height:100vh; display:grid; grid-template-columns:320px 1fr 300px; grid-template-rows:auto 1fr; }
@@ -141,7 +142,7 @@ button:disabled { opacity:.4; cursor:default; }
 .kn-textwrap { position:relative; }
 .kn-textwrap textarea { width:100%; padding-right:40px; }
 .kn-mic { position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; }
-.kn-mic.live { background:#c0392b; border-color:#c0392b; animation:pulse 1.2s infinite; }
+.kn-mic.live { background:var(--accent); border-color:var(--accent); animation:pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity:.55; } }
 .kn-live, .kn-hint { font-size:11px; color:var(--dim); } .kn-live em { color:var(--fg); }
 .kn-error { font-size:11px; color:var(--err); }
@@ -203,3 +204,15 @@ button:disabled { opacity:.4; cursor:default; }
 .segmented { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
 .segmented button { border:0; border-radius:0; padding:6px 14px; background:none; }
 .segmented button[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); font-weight:600; }
+
+/* add-files dialog */
+.modal-wide { width:min(480px, calc(100vw - 32px)); }
+.dropzone { display:flex; flex-direction:column; align-items:center; gap:6px; padding:32px 16px; border:2px dashed var(--line); border-radius:8px; text-align:center; transition:border-color .12s, background .12s; }
+.dropzone.over { border-color:var(--accent); background:var(--raised); }
+.dropzone small { color:var(--dim); }
+.dropzone-actions { display:flex; gap:8px; margin-top:10px; }
+.dropzone-msg { color:var(--dim); }
+.add-menu { position:relative; display:inline-block; }
+.add-menu-list { position:absolute; top:calc(100% + 4px); left:50%; transform:translateX(-50%); z-index:2; min-width:140px; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 20px var(--shadow); overflow:hidden; }
+.add-menu-list button { border:0; border-radius:0; background:none; color:var(--fg); padding:7px 12px; text-align:left; font:inherit; cursor:pointer; }
+.add-menu-list button:hover { background:var(--raised); }
