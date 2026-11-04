@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Entry } from '@/lib/scene';
 import PartCanvas from './PartCanvas';
-import { X } from 'lucide-react';
-import Toggle from './Toggle';
+import { Box, X } from 'lucide-react';
 
 const MIN_W = 260, MIN_H = 200, MAX_W = 900, MAX_H = 800;
 
@@ -66,8 +65,7 @@ export default function IsolatedView({ entry, title, onClose }: { entry: Entry; 
       <div className="iso-head" onPointerDown={startMove}>
         <span className="iso-title">{title ?? entry.name}</span>
         <span className="iso-actions">
-          <Toggle label="Wireframe" checked={wireframe} onChange={setWireframe} />
-          <button onClick={() => resetRef.current()} title="Recenter and fit (double-click also recenters)">⌖</button>
+          <button className="btn icon-btn" aria-pressed={wireframe} aria-label="Wireframe" title="Wireframe" onClick={() => setWireframe(!wireframe)}><Box className="ic" size={14} /></button>
           <button onClick={onClose} aria-label="Close"><X className="ic" size={14} /></button>
         </span>
       </div>
