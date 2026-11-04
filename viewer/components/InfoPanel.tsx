@@ -5,6 +5,7 @@ import type { Entry } from '@/lib/scene';
 import type { Note } from '@/lib/noteTypes';
 import type { NoteInput } from '@/lib/useNotes';
 import { ArrowLeft, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
+import { useMode } from '@/lib/mode';
 import KnowledgeNotes from './KnowledgeNotes';
 
 // Right-hand column: the machine's name (autosaved), the knowledge notes for the machine or the
@@ -30,6 +31,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   onRemoveNote: (id: string) => Promise<void>;
 }) {
   const [saved, setSaved] = useState(true);
+  const readOnly = useMode() === 'consumer';
   const [open, setOpen] = useState(true); // general information card expanded
   const pending = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -103,13 +105,17 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
                   <code>{selected.name}</code>
                   <button className="info-isolate" onClick={() => onIsolate(selected)}><Maximize2 className="ic" size={13} /> View isolated</button>
                 </div>
-                <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />
+                {readOnly
+                  ? <ReadOnlyField label="Name" value={names[selected.name]} empty="Not named yet" />
+                  : <PartNaming key={selected.name} id={selected.name} name={names[selected.name] ?? ''} onSave={onPartName} />}
               </>
             ) : (
               <>
-                <label>Name
-                  <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
-                </label>
+                {readOnly
+                  ? <ReadOnlyField label="Name" value={title} empty="Not named yet" />
+                  : <label>Name
+                      <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
+                    </label>}
               </>
             )}
             <Coverage stats={stats} />
@@ -124,6 +130,10 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
     </div>
   );
 }
+
+const ReadOnlyField = ({ label, value, empty }: { label: string; value?: string; empty: string }) => (
+  <div className="info-readonly"><small>{label}</small><div className={value ? '' : 'empty'}>{value || empty}</div></div>
+);
 
 type Stats = { main: number; mainNoted: number; unique: number; uniqueNoted: number };
 const Coverage = ({ stats }: { stats: Stats }) => (

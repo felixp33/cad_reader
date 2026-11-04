@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchScene, firstGeneration, type Entry } from '@/lib/scene';
 import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
+import { setMode, useMode } from '@/lib/mode';
 import PartCanvas from './PartCanvas';
 import TopBar from './TopBar';
 
@@ -16,6 +17,7 @@ export default function Naming() {
   const [index, setIndex] = useState(0);
   const [draft, setDraft] = useState('');
   const [status, setStatus] = useState('Loading…');
+  const mode = useMode();
   const resetRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +121,18 @@ export default function Naming() {
     return () => removeEventListener('keydown', onKey);
   }, []);
   useEffect(() => { document.querySelector('.naming-item.sel')?.scrollIntoView({ block: 'nearest' }); }, [index]);
+
+  if (mode === 'consumer') {
+    return (
+      <div className="naming">
+        <TopBar><h1 className="topbar-title">Name parts</h1></TopBar>
+        <div className="naming-empty" style={{ flexDirection: 'column', gap: 12 }}>
+          Naming parts is part of the Creator view.
+          <button className="btn" onClick={() => setMode('creator')}>Switch to Creator</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="naming">

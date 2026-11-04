@@ -448,8 +448,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .show-parts { display:inline-flex; align-items:center; gap:var(--s-1); padding:var(--s-1) var(--s-2); font-size:12px; color:var(--dim); background:none; margin-right:var(--s-1); }
 .show-parts:hover { color:var(--fg); }
 .show-parts.on { color:var(--accent); border-color:var(--accent); }
-.focus-pill { position:absolute; z-index:2; left:calc(var(--left) + var(--s-5)); bottom:calc(var(--s-3) + 44px); display:flex; align-items:center; gap:var(--s-3); padding:var(--s-1) var(--s-1) var(--s-1) var(--s-4); background:color-mix(in srgb, var(--panel) 80%, transparent); border:1px solid var(--accent); border-radius:999px; backdrop-filter:blur(14px); box-shadow:var(--float-shadow); }
-.focus-pill .btn { border-radius:999px; padding:var(--s-1) var(--s-3); }
 
 /* 3D background choices (Settings): override the theme's canvas colors */
 :root[data-canvas="faded"] { --canvas-bg:#dfe2e4; --canvas-bg2:#d3d7da; }
@@ -472,3 +470,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .toolrow .btn[aria-pressed="true"] { background:var(--accent-soft); border-color:var(--accent); }
 /* the arrows are centred with a transform; the global press effect must keep it */
 .naming-arrow:active:not(:disabled) { transform:translateY(-50%) scale(.95); }
+
+/* creator / consumer */
+.mode-switch button { display:inline-flex; align-items:center; gap:var(--s-1); padding:var(--s-1) var(--s-3); }
+.card-contrib { color:var(--dim); white-space:normal !important; }
+.info-readonly { display:flex; flex-direction:column; gap:var(--s-1); }
+.info-readonly small { color:var(--dim); font-size:12px; }
+.info-readonly .empty { color:var(--dim); font-style:italic; }

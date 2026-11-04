@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, Mic, Pencil, ScanSearch, Square, Trash2, X } from 'lucide-react';
+import { useMode } from '@/lib/mode';
 import { useUser } from '@/lib/user';
 import type { Entry } from '@/lib/scene';
 import { MACHINE, NOTE_TYPES, notePartIds, type Mention, type Note, type NoteType } from '@/lib/noteTypes';
@@ -29,6 +30,7 @@ const typeLabel = (t: NoteType) => NOTE_TYPES.find((x) => x.id === t)?.label ?? 
 
 // Capture + list of expert knowledge for the machine or the selected part.
 export default function KnowledgeNotes({ notes, root, selected, label, names, onOpenPart, focusNote, onShowParts, onSave, onRemove }: Props) {
+  const readOnly = useMode() === 'consumer';
   const target = selected?.name ?? MACHINE;
   const [editing, setEditing] = useState<Note | null>(null);
   const [authorOpen, setAuthorOpen] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
               ? <button className="show-parts on" onClick={() => onShowParts(null, [])}><Eye size={13} /> Show all</button>
               : <button className="show-parts" title="Show only the parts this note is about" onClick={() => onShowParts(n.id, notePartIds(n))}><ScanSearch size={13} /> Show parts</button>
           )}
-          {!from && (<>
+          {!from && !readOnly && (<>
             <button className="icon" title="Edit note" aria-label="Edit note" onClick={() => setEditing(n)}><Pencil size={14} /></button>
             <button className="icon" title="Delete note" aria-label="Delete note" onClick={() => { if (confirm('Delete this note?')) onRemove(n.id); }}><Trash2 size={14} /></button>
           </>)}
@@ -89,7 +91,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
   return (
     <section className="kn">
       <h3>Knowledge notes <span>{direct.length}</span></h3>
-      <NoteForm
+      {!readOnly && <NoteForm
         key={editing?.id ?? `new-${target}-${draft}`}
         target={target}
         initial={editing}
@@ -97,7 +99,8 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
         onSave={onSave}
         onCreated={setActiveId}
         onDone={() => { setEditing(null); setActiveId(null); setDraft((d) => d + 1); }}
-      />
+      />}
+      {readOnly && direct.length + inherited.length === 0 && <p className="kn-hint">Nobody has added notes here yet.</p>}
       {direct.filter((n) => n.id !== beingEdited).map((n) => card(n))}
       {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
       {inherited.map((n) => card(n, partLabel(n.parts.find((p) => inheritedFrom.includes(p))!)))}

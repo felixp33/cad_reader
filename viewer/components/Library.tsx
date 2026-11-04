@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useMode } from '@/lib/mode';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
 import { BookOpen, History, ListChecks, Mic, Network, Plus } from 'lucide-react';
@@ -35,6 +36,9 @@ export default function Library() {
   const [reload, setReload] = useState(0);
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState('');
+  const mode = useMode();
+  const [summary, setSummary] = useState<Record<string, { title: string; notes: number; authors: string[]; named: number }>>({});
+  useEffect(() => { fetch('/api/summary').then((r) => r.json()).then(setSummary).catch(() => {}); }, [reload]);
 
   const setPreview = (path: string, p: Preview) => setPreviews((prev) => ({ ...prev, [path]: p }));
 
@@ -74,7 +78,7 @@ export default function Library() {
   return (
     <div className="library">
       {adding && <AddFilesDialog onClose={() => setAdding(false)} onUploaded={() => setReload((n) => n + 1)} />}
-      <TopBar search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={<button className="btn" onClick={() => setAdding(true)}><Plus className="ic" size={16} /> Add</button>}>
+      <TopBar home={false} search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={mode === 'creator' ? <button className="btn" onClick={() => setAdding(true)}><Plus className="ic" size={16} /> Add</button> : undefined}>
         <h1 className="topbar-title">Machines</h1>
         <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
       </TopBar>
@@ -97,8 +101,14 @@ export default function Library() {
                 {pv?.state === 'error' && <span title={pv.message}>Preview failed</span>}
               </Link>
               <div className="card-info">
-                <div className="card-name" title={m.path}>{m.path.split('/').pop()}</div>
-                <small>{(m.size / 1e6).toFixed(1)} MB · {m.path.split('/').slice(0, -1).join('/') || '/'}</small>
+                <div className="card-name" title={m.path}>{summary[m.path]?.title || m.path.split('/').pop()}</div>
+                <small>{(m.size / 1e6).toFixed(1)} MB · {m.path.split('/').pop()}</small>
+                {summary[m.path] && (summary[m.path].notes > 0 || summary[m.path].named > 0) ? (
+                  <small className="card-contrib">
+                    {summary[m.path].notes} note{summary[m.path].notes === 1 ? '' : 's'} · {summary[m.path].named} named part{summary[m.path].named === 1 ? '' : 's'}
+                    {summary[m.path].authors.length > 0 && <> · {summary[m.path].authors.join(', ')}</>}
+                  </small>
+                ) : mode === 'consumer' ? <small className="card-contrib">No information yet</small> : null}
               </div>
             </div>
           );

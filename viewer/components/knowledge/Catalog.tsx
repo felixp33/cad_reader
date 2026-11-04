@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { KINDS, TOPICS, type Kind, type Topic } from '@/lib/knowledgeTypes';
+import { useMode } from '@/lib/mode';
 import { useKnowledge } from '@/lib/useKnowledge';
 import { ItemDetail, ItemForm, KindBadge } from './ItemParts';
 import { SkeletonRows } from '../Skeleton';
@@ -10,6 +11,7 @@ import KnowledgeShell from './KnowledgeShell';
 // Version 1 — the lookup emphasis: a searchable, filterable reference list with full detail.
 export default function Catalog() {
   const { items, save, remove } = useKnowledge();
+  const readOnly = useMode() === 'consumer';
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<Kind | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -27,7 +29,7 @@ export default function Catalog() {
 
   return (
     <KnowledgeShell current="/knowledge/catalog" title="Knowledge catalog" search={{ value: q, onChange: setQ, placeholder: 'Search norms, rules, laws…' }}
-      actions={<button className="btn" onClick={() => { setSelId(null); setForm('new'); }}>+ New entry</button>}>
+      actions={readOnly ? undefined : <button className="btn" onClick={() => { setSelId(null); setForm('new'); }}>+ New entry</button>}>
       <div className="kcols">
         <aside className="kside">
           <h2>Type</h2>
@@ -51,8 +53,8 @@ export default function Catalog() {
             <ItemForm initial={form === 'edit' ? sel ?? undefined : undefined} all={items} onCancel={() => setForm(null)}
               onSave={async (i) => { const s = await save(i); setSelId(s.id); setForm(null); }} />
           ) : sel && items ? (
-            <ItemDetail item={sel} all={items} onSelect={setSelId} onEdit={() => setForm('edit')} onDelete={() => { remove(sel.id); setSelId(null); }} />
-          ) : <div className="naming-empty">Select an entry, or add a new one.</div>}
+            <ItemDetail item={sel} all={items} onSelect={setSelId} onEdit={readOnly ? undefined : () => setForm('edit')} onDelete={readOnly ? undefined : () => { remove(sel.id); setSelId(null); }} />
+          ) : <div className="naming-empty">{readOnly ? 'Select an entry.' : 'Select an entry, or add a new one.'}</div>}
         </section>
       </div>
     </KnowledgeShell>

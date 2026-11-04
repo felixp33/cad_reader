@@ -13,6 +13,7 @@ import { Box, RotateCcw, Slice, Tag, X } from 'lucide-react';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
 import { applySlice, placePlane } from '@/lib/slice';
+import { useMode } from '@/lib/mode';
 import { useNotes } from '@/lib/useNotes';
 import InfoPanel from './InfoPanel';
 import Toggle from './Toggle';
@@ -40,7 +41,7 @@ export default function Viewer() {
   const [isolated, setIsolated] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(false);
   const [focusNote, setFocusNote] = useState<string | null>(null); // note whose parts are the only ones shown
-  const [focusCount, setFocusCount] = useState(0);
+  const mode = useMode();
   const [slicing, setSlicing] = useState(false);
   const [axis, setAxis] = useState(0);
   const [cutAt, setCutAt] = useState(0.5); // 0..1 along the machine's extent on the chosen axis
@@ -187,7 +188,6 @@ export default function Viewer() {
     controls.minDistance = radius * 0.05;
     controls.update();
     setFocusNote(noteId);
-    setFocusCount(entries.length);
   };
 
   // While slicing is on, clip the machine with the plane and paint the cut.
@@ -277,7 +277,7 @@ export default function Viewer() {
           <button className="btn icon-btn" aria-pressed={wire} aria-label="Wireframe" onClick={() => setWireframe(!wire)} title="Wireframe"><Box className="ic" size={16} /></button>
           <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
           <span className="toolrow-sep" aria-hidden />
-          <Link className="btn" href={`/naming${modelQuery}`}><Tag className="ic" size={15} /> Name parts</Link>
+          {mode === 'creator' && <Link className="btn" href={`/naming${modelQuery}`}><Tag className="ic" size={15} /> Name parts</Link>}
         </div>
         {slicing && (
           <div className="slicebar" role="group" aria-label="Slice controls">
@@ -307,12 +307,6 @@ export default function Viewer() {
         )}
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
         {status && <div className={`status status-top${slicing ? ' below-slice' : ''}`}>{status}</div>}
-        {focusNote && (
-          <div className="focus-pill">
-            Showing {focusCount} part{focusCount === 1 ? '' : 's'} from a note
-            <button className="btn" onClick={() => showParts(null, [])}><X className="ic" size={14} /> Show all</button>
-          </div>
-        )}
       </main>
       <InfoPanel model={currentModel} root={root} mainIds={mainIds} selected={selected} label={labelOf} names={names} onPartName={savePartName} onOpenPart={openPart} focusNote={focusNote} onShowParts={showParts} backLabel={history.length ? (history[history.length - 1] ? labelOf(history[history.length - 1]!) : title || 'the machine') : null} onBack={goBack} onIsolate={setIsolated} title={title} onTitleChange={setTitle} notes={notes} onSaveNote={saveNote} onRemoveNote={removeNote} />
     </div>
