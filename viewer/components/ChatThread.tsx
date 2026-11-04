@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import AskField from './AskField';
+import { Refs } from './References';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -67,7 +68,7 @@ export default function ChatThread({ model, selected, suggestions, intro, width,
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`ask-msg ${m.role}`}>{m.content || <span className="ask-dots" aria-label="Thinking"><i /><i /><i /></span>}</div>
+          <div key={i} className={`ask-msg ${m.role}`}>{m.content ? (m.role === 'assistant' ? <Refs text={m.content} /> : m.content) : <span className="ask-dots" aria-label="Thinking"><i /><i /><i /></span>}</div>
         ))}
         <div ref={endRef} />
       </div>

@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import type { Mention } from '@/lib/noteTypes';
+import { Refs } from './References';
 
 // Note text with the words that refer to parts turned into tappable terms. Terms with one candidate
 // open it directly; ambiguous ones show a small menu of candidates first.
@@ -20,7 +21,7 @@ export default function LinkedText({ text, mentions, label, onOpen }: {
 
   usable.forEach((m, i) => {
     if (m.start < pos) return;
-    nodes.push(text.slice(pos, m.start));
+    nodes.push(<Refs key={`t${i}`} text={text.slice(pos, m.start)} />);
     nodes.push(
       <span key={i} className="term-wrap">
         <button
@@ -40,6 +41,6 @@ export default function LinkedText({ text, mentions, label, onOpen }: {
     );
     pos = m.end;
   });
-  nodes.push(text.slice(pos));
+  nodes.push(<Refs key="end" text={text.slice(pos)} />);
   return <>{nodes}</>;
 }

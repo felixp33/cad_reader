@@ -526,3 +526,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .info-notes { min-height:200px; }
 .kn-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--s-3); }
 .kn-total { color:var(--dim); font-size:12px; white-space:nowrap; flex:none; }
+
+/* references to norms and laws */
+.ref { display:inline-flex; align-items:baseline; gap:2px; padding:0; border:0; background:none; color:var(--accent); font:inherit; text-decoration:underline; text-decoration-style:dashed; text-underline-offset:3px; cursor:pointer; }
+.ref:hover { text-decoration-style:solid; }
+.ref svg { align-self:center; }
+.ref-panel { position:fixed; width:min(480px, 100% - 2 * var(--s-4)); z-index:7; background:var(--panel); } /* top and height come from the content and the note it belongs to */
+.ref-panel .ask-head { cursor:default; } .ref-panel .ask-head strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ref-doc { flex:1; width:100%; min-height:0; border:0; background:#fff; }
+.ref-panel:has(.ref-doc) { height:min(520px, calc(100vh - 2 * var(--s-4))); }
+.ref-body { min-height:0; overflow:auto; padding:var(--s-4); display:flex; flex-direction:column; gap:var(--s-2); } .ref-body h2 { margin:0; font-size:16px; } .ref-body p { margin:0; }
+.ksource { display:flex; flex-wrap:wrap; align-items:center; gap:var(--s-2); margin:var(--s-3) 0; } .ksource .btn { display:inline-flex; align-items:center; gap:var(--s-1); text-decoration:none; }

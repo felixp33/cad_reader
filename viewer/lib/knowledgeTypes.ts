@@ -38,6 +38,9 @@ export type KnowledgeItem = {
   status: Status;
   year?: number;
   links: string[]; // ids of related items
+  url?: string; // where the full text can be read (opened in a new tab)
+  doc?: { name: string; mime: string }; // a document that was provided here (stored on the server, shown in the reference panel)
+  aliases?: string[]; // other ways notes refer to it, e.g. "IEC 60204-1"
   createdAt: string;
 };
 

@@ -20,6 +20,8 @@ export async function PUT(req: Request) {
     year: Number.isInteger(item.year) ? item.year : undefined,
     topics: Array.isArray(item.topics) ? item.topics.filter((t: unknown) => has(TOPICS, t)) : undefined,
     links: Array.isArray(item.links) ? item.links.filter((l: unknown) => typeof l === 'string') : undefined,
+    ...(typeof item.url === 'string' && { url: /^https?:\/\//i.test(item.url.trim()) ? item.url.trim() : undefined }),
+    ...(Array.isArray(item.aliases) && { aliases: item.aliases.filter((a: unknown) => typeof a === 'string' && a.trim()).map((a: string) => a.trim()) }),
   }));
 }
 

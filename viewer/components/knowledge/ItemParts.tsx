@@ -1,15 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { ExternalLink, FileText, Upload } from 'lucide-react';
+import { useReference } from '../References';
 import { KINDS, STATUSES, TOPICS, kindLabel, statusLabel, topicLabel, type KnowledgeItem, type Topic } from '@/lib/knowledgeTypes';
 import type { KnowledgeInput } from '@/lib/useKnowledge';
 
 export const KindBadge = ({ kind }: { kind: KnowledgeItem['kind'] }) => <span className={`kbadge k-${kind}`}>{kindLabel(kind)}</span>;
 
 // Full detail of one item, with links to related ones.
-export function ItemDetail({ item, all, onSelect, onEdit, onDelete }: {
+export function ItemDetail({ item, all, onSelect, onEdit, onDelete, onUpload, onRemoveDoc }: {
   item: KnowledgeItem; all: KnowledgeItem[]; onSelect: (id: string) => void; onEdit?: () => void; onDelete?: () => void;
+  onUpload?: (file: File) => Promise<void>; onRemoveDoc?: () => void;
 }) {
+  const { open } = useReference();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState('');
   const related = all.filter((i) => item.links.includes(i.id) || i.links.includes(item.id));
   return (
     <article className="kdetail">
@@ -17,6 +23,19 @@ export function ItemDetail({ item, all, onSelect, onEdit, onDelete }: {
       <h2>{item.title}</h2>
       {item.ref && <div className="kref">{item.ref}{item.year ? ` · ${item.year}` : ''}</div>}
       <p>{item.summary || <em>No summary yet.</em>}</p>
+      {(item.doc || item.url || onUpload) && (
+        <div className="ksource">
+          {item.doc && <button className="btn" onClick={() => open(item)}><FileText className="ic" size={14} /> {item.doc.name}</button>}
+          {item.url && <a className="btn" href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="ic" size={14} /> Open the text</a>}
+          {onUpload && (<>
+            <input ref={fileInput} type="file" hidden accept="application/pdf,text/html,text/plain,image/png,image/jpeg,image/svg+xml"
+              onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { setUploadError(''); try { await onUpload(f); } catch (err) { setUploadError((err as Error).message); } } }} />
+            <button className="btn" onClick={() => fileInput.current?.click()}><Upload className="ic" size={14} /> {item.doc ? 'Replace document' : 'Provide a document'}</button>
+            {item.doc && onRemoveDoc && <button className="btn" onClick={onRemoveDoc}>Remove document</button>}
+          </>)}
+          {uploadError && <span className="kn-error">{uploadError}</span>}
+        </div>
+      )}
       {item.topics.length > 0 && <div className="chips">{item.topics.map((t) => <span key={t} className="chip">{topicLabel(t)}</span>)}</div>}
       {related.length > 0 && (
         <>
@@ -59,6 +78,8 @@ export function ItemForm({ initial, all, onSave, onCancel }: {
         <label>Year<input type="number" value={f.year ?? ''} onChange={(e) => set('year', e.target.value ? +e.target.value : undefined)} /></label>
         <label>Region<input value={f.region ?? ''} onChange={(e) => set('region', e.target.value)} placeholder="EU, DE…" /></label>
       </div>
+      <label>Link to the text<input type="url" value={f.url ?? ''} onChange={(e) => set('url', e.target.value)} placeholder="https://… (opens in a new tab)" /></label>
+      <label>Also called<input value={(f.aliases ?? []).join(', ')} onChange={(e) => set('aliases', e.target.value.split(',').map((a) => a.trimStart()))} placeholder="other names used in notes, separated by commas" /></label>
       <label>Summary<textarea value={f.summary ?? ''} onChange={(e) => set('summary', e.target.value)} rows={4} /></label>
       <fieldset><legend>Applies to</legend>
         <div className="chips">{TOPICS.map((t) => <label key={t.id} className="chip check"><input type="checkbox" checked={(f.topics ?? []).includes(t.id as Topic)} onChange={() => set('topics', toggle(f.topics, t.id as Topic))} />{t.label}</label>)}</div>

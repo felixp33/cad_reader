@@ -4,24 +4,25 @@ import path from 'node:path';
 import type { KnowledgeItem } from './knowledgeTypes';
 
 const FILE = path.join(process.cwd(), 'data', 'knowledge.json');
+const DOCS = path.join(process.cwd(), 'data', 'docs');
 
 type Seed = Omit<KnowledgeItem, 'createdAt'>;
 const SEED: Seed[] = [
   { id: 'machinery-directive', title: 'Machinery Directive', ref: '2006/42/EC', kind: 'law', region: 'EU', status: 'in-force', year: 2006,
     topics: ['general'], links: ['machinery-regulation', 'iso-12100', 'lvd', 'emc'],
-    summary: 'Essential health and safety requirements for machinery placed on the EU market, and the basis for CE marking. Being replaced by Regulation (EU) 2023/1230.' },
+    summary: 'Essential health and safety requirements for machinery placed on the EU market, and the basis for CE marking. Being replaced by Regulation (EU) 2023/1230.', url: 'https://eur-lex.europa.eu/eli/dir/2006/42/oj' },
   { id: 'machinery-regulation', title: 'Machinery Regulation', ref: '(EU) 2023/1230', kind: 'law', region: 'EU', status: 'upcoming', year: 2023,
     topics: ['general', 'controls'], links: ['machinery-directive', 'iso-13849-1'],
-    summary: 'Replaces the Machinery Directive and applies from 20 January 2027. Adds requirements for software, self-evolving behaviour and protection against corruption of safety functions.' },
+    summary: 'Replaces the Machinery Directive and applies from 20 January 2027. Adds requirements for software, self-evolving behaviour and protection against corruption of safety functions.', url: 'https://eur-lex.europa.eu/eli/reg/2023/1230/oj' },
   { id: 'lvd', title: 'Low Voltage Directive', ref: '2014/35/EU', kind: 'law', region: 'EU', status: 'in-force', year: 2014,
     topics: ['electrical'], links: ['machinery-directive', 'iec-60204-1'],
-    summary: 'Safety of electrical equipment designed for use between 50 and 1000 V AC or 75 and 1500 V DC.' },
+    summary: 'Safety of electrical equipment designed for use between 50 and 1000 V AC or 75 and 1500 V DC.', url: 'https://eur-lex.europa.eu/eli/dir/2014/35/oj' },
   { id: 'emc', title: 'EMC Directive', ref: '2014/30/EU', kind: 'law', region: 'EU', status: 'in-force', year: 2014,
     topics: ['emc', 'electrical'], links: ['machinery-directive'],
-    summary: 'Equipment must not cause excessive electromagnetic disturbance and must tolerate the disturbance in its environment.' },
+    summary: 'Equipment must not cause excessive electromagnetic disturbance and must tolerate the disturbance in its environment.', url: 'https://eur-lex.europa.eu/eli/dir/2014/30/oj' },
   { id: 'betrsichv', title: 'Betriebssicherheitsverordnung (BetrSichV)', ref: 'BetrSichV 2015', kind: 'law', region: 'DE', status: 'in-force', year: 2015,
     topics: ['operation'], links: ['dguv-v3'],
-    summary: 'German ordinance on safety when providing and using work equipment: risk assessment by the employer, inspections and maintenance.' },
+    summary: 'German ordinance on safety when providing and using work equipment: risk assessment by the employer, inspections and maintenance.', url: 'https://www.gesetze-im-internet.de/betrsichv_2015/', aliases: ['BetrSichV'] },
   { id: 'iso-12100', title: 'General principles for design — risk assessment and risk reduction', ref: 'EN ISO 12100:2010', kind: 'norm', region: 'International', status: 'in-force', year: 2010,
     topics: ['general'], links: ['machinery-directive', 'iso-13849-1', 'iso-14120'],
     summary: 'The basic framework for machine safety: identify hazards, estimate and evaluate risk, reduce it by design, safeguarding and information.' },
@@ -30,7 +31,7 @@ const SEED: Seed[] = [
     summary: 'Design and performance of safety functions in control systems, expressed as Performance Levels (PL a to e).' },
   { id: 'iec-60204-1', title: 'Electrical equipment of machines — Part 1: General requirements', ref: 'EN 60204-1:2018', kind: 'norm', region: 'International', status: 'in-force', year: 2018,
     topics: ['electrical'], links: ['lvd', 'iec-60204-1-2006'],
-    summary: 'Requirements for the electrical equipment of machines: supply disconnection, protection, wiring, control circuits, emergency stop.' },
+    summary: 'Requirements for the electrical equipment of machines: supply disconnection, protection, wiring, control circuits, emergency stop.', aliases: ['IEC 60204-1', 'ISO 60204-1'] },
   { id: 'iec-60204-1-2006', title: 'Electrical equipment of machines — Part 1 (previous edition)', ref: 'EN 60204-1:2006', kind: 'norm', region: 'International', status: 'withdrawn', year: 2006,
     topics: ['electrical'], links: ['iec-60204-1'],
     summary: 'Replaced by the 2018 edition. Still found in older machine documentation.' },
@@ -45,13 +46,13 @@ const SEED: Seed[] = [
     summary: 'Principles for designing and selecting interlocking devices, including how to reduce defeating them.' },
   { id: 'iec-60529', title: 'Degrees of protection provided by enclosures (IP Code)', ref: 'EN 60529', kind: 'norm', region: 'International', status: 'in-force', year: 1989,
     topics: ['guarding', 'electrical'], links: ['iec-60204-1'],
-    summary: 'The IP code: protection against solid objects, dust and water for enclosures.' },
+    summary: 'The IP code: protection against solid objects, dust and water for enclosures.', aliases: ['IEC 60529', 'IP code'] },
   { id: 'iso-10218', title: 'Safety requirements for industrial robots', ref: 'ISO 10218-1 / -2', kind: 'norm', region: 'International', status: 'in-force',
     topics: ['robot'], links: ['iso-12100'],
-    summary: 'Safety requirements for robots (part 1) and for robot systems and their integration (part 2).' },
+    summary: 'Safety requirements for robots (part 1) and for robot systems and their integration (part 2).', aliases: ['ISO 10218'] },
   { id: 'dguv-v3', title: 'DGUV Vorschrift 3 — Electrical installations and equipment', ref: 'DGUV V3', kind: 'rule', region: 'DE', status: 'in-force',
     topics: ['electrical', 'operation'], links: ['betrsichv', 'iec-60204-1'],
-    summary: 'German accident-insurance rule: electrical equipment must be tested by a qualified person before first use and at regular intervals.' },
+    summary: 'German accident-insurance rule: electrical equipment must be tested by a qualified person before first use and at regular intervals.', aliases: ['DGUV Vorschrift 3'] },
 ];
 
 function write(items: KnowledgeItem[]) {
@@ -83,5 +84,25 @@ export function saveKnowledge(input: Partial<KnowledgeItem> & Pick<KnowledgeItem
 }
 
 export function deleteKnowledge(id: string) {
+  fs.rmSync(docFile(id), { force: true });
   write(listKnowledge().filter((i) => i.id !== id).map((i) => ({ ...i, links: i.links.filter((l) => l !== id) })));
+}
+
+// Documents provided for an entry, stored as data/docs/<id> (the entry's `doc` holds name and type).
+export const DOC_TYPES = ['application/pdf', 'text/html', 'text/plain', 'image/png', 'image/jpeg', 'image/svg+xml'];
+const docFile = (id: string) => path.join(DOCS, path.basename(id));
+
+export function setDoc(id: string, doc: { name: string; mime: string } | null, data?: Buffer): KnowledgeItem | null {
+  const items = listKnowledge();
+  const item = items.find((i) => i.id === id);
+  if (!item) return null;
+  if (doc && data) { fs.mkdirSync(DOCS, { recursive: true }); fs.writeFileSync(docFile(id), data); item.doc = doc; }
+  else { fs.rmSync(docFile(id), { force: true }); delete item.doc; }
+  write(items);
+  return item;
+}
+
+export function readDoc(id: string): { doc: { name: string; mime: string }; data: Buffer } | null {
+  const doc = listKnowledge().find((i) => i.id === id)?.doc;
+  try { return doc ? { doc, data: fs.readFileSync(docFile(id)) } : null; } catch { return null; }
 }

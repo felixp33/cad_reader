@@ -6,6 +6,7 @@ import type { TrackballControls } from "three/examples/jsm/controls/TrackballCon
 import { createControls } from "@/lib/controls";
 import { frameObject } from "@/lib/frame";
 import { usePanelWidths } from "@/lib/usePanelWidths";
+import { useReferenceAnchor } from "./References";
 import { cssColor, subscribeTheme } from "@/lib/theme";
 import TopBar from "./TopBar";
 import Link from "next/link";
@@ -44,6 +45,7 @@ export default function Viewer() {
 	const [names, setNames] = useState<Record<string, string>>({});
 	const [history, setHistory] = useState<(Entry | null)[]>([]); // selections we jumped away from by following links
 	const { widths, startDrag, reset: resetWidth } = usePanelWidths();
+	useReferenceAnchor(widths.right); // the reference panel opens to the left of the information column
 	const [showGiven, setShowGiven] = useState(true);
 	const [isolated, setIsolated] = useState<Entry | null>(null);
 	const [loading, setLoading] = useState(false);

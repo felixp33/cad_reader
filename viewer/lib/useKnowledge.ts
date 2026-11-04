@@ -22,5 +22,19 @@ export function useKnowledge() {
     setItems((prev) => (prev ?? []).filter((i) => i.id !== id).map((i) => ({ ...i, links: i.links.filter((l) => l !== id) })));
   }, []);
 
-  return { items, save, remove };
+  const replace = (saved: KnowledgeItem) => setItems((prev) => (prev ?? []).map((i) => (i.id === saved.id ? saved : i)));
+
+  // The document provided for an entry (a PDF, page, text or image).
+  const uploadDoc = useCallback(async (id: string, file: File) => {
+    const res = await fetch(`/api/knowledge/doc?id=${encodeURIComponent(id)}&name=${encodeURIComponent(file.name)}`, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+    if (!res.ok) throw new Error(await res.text());
+    replace(await res.json());
+  }, []);
+
+  const removeDoc = useCallback(async (id: string) => {
+    const res = await fetch('/api/knowledge/doc?id=' + encodeURIComponent(id), { method: 'DELETE' });
+    if (res.ok) replace(await res.json());
+  }, []);
+
+  return { items, save, remove, uploadDoc, removeDoc };
 }

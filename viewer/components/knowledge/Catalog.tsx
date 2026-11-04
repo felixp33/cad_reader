@@ -10,7 +10,7 @@ import KnowledgeShell from './KnowledgeShell';
 
 // Version 1 — the lookup emphasis: a searchable, filterable reference list with full detail.
 export default function Catalog() {
-  const { items, save, remove } = useKnowledge();
+  const { items, save, remove, uploadDoc, removeDoc } = useKnowledge();
   const readOnly = useMode() === 'consumer';
   const [q, setQ] = useState('');
   const [kind, setKind] = useState<Kind | null>(null);
@@ -53,7 +53,7 @@ export default function Catalog() {
             <ItemForm initial={form === 'edit' ? sel ?? undefined : undefined} all={items} onCancel={() => setForm(null)}
               onSave={async (i) => { const s = await save(i); setSelId(s.id); setForm(null); }} />
           ) : sel && items ? (
-            <ItemDetail item={sel} all={items} onSelect={setSelId} onEdit={readOnly ? undefined : () => setForm('edit')} onDelete={readOnly ? undefined : () => { remove(sel.id); setSelId(null); }} />
+            <ItemDetail item={sel} all={items} onSelect={setSelId} onEdit={readOnly ? undefined : () => setForm('edit')} onUpload={readOnly ? undefined : (file) => uploadDoc(sel.id, file)} onRemoveDoc={readOnly ? undefined : () => removeDoc(sel.id)} onDelete={readOnly ? undefined : () => { remove(sel.id); setSelId(null); }} />
           ) : <div className="naming-empty">{readOnly ? 'Select an entry.' : 'Select an entry, or add a new one.'}</div>}
         </section>
       </div>
