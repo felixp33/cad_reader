@@ -1,12 +1,12 @@
-import { NOTE_TYPES, isNoteType, type NoteType } from './noteTypes';
+import { NOTE_TYPES, cleanTypes, type NoteType } from './noteTypes';
 
 const MODEL = process.env.OPENAI_MODEL || 'sol-5.6';
 
-// Asks the model which category a note belongs to. Falls back to 'consideration' when there is no API key
+// Asks the model which labels a note belongs to (usually one, more when it clearly covers several). Falls back to 'consideration' when there is no API key
 // or the call fails, so saving a note never depends on the API being reachable.
-export async function classifyNote(text: string): Promise<NoteType> {
+export async function classifyNote(text: string): Promise<NoteType[]> {
   const key = process.env.OPENAI_API_KEY;
-  if (!key) return 'consideration';
+  if (!key) return ['consideration'];
   const list = NOTE_TYPES.map((t) => `- ${t.id}: ${t.label}${t.hint ? ` (${t.hint})` : ''}`).join('\n');
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -17,17 +17,17 @@ export async function classifyNote(text: string): Promise<NoteType> {
         model: MODEL,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: `You categorize notes written by engineers about a machine. Choose the single best category id:\n${list}\nReply with JSON: {"type": "<id>"}.` },
+          { role: 'system', content: `You categorize notes written by engineers about a machine. Choose the category ids that fit (usually one, at most three, only when the note clearly covers several):\n${list}\nReply with JSON: {"types": ["<id>", ...]}.` },
           { role: 'user', content: text },
         ],
       }),
     });
-    if (!res.ok) { console.error('classify failed', res.status, await res.text()); return 'consideration'; }
+    if (!res.ok) { console.error('classify failed', res.status, await res.text()); return ['consideration']; }
     const data = await res.json();
-    const type = JSON.parse(data.choices?.[0]?.message?.content ?? '{}').type;
-    return isNoteType(type) ? type : 'consideration';
+    const types = cleanTypes(JSON.parse(data.choices?.[0]?.message?.content ?? '{}').types);
+    return types.length ? types : ['consideration'];
   } catch (e) {
     console.error('classify error', e);
-    return 'consideration';
+    return ['consideration'];
   }
 }

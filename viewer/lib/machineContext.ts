@@ -44,7 +44,7 @@ export function machineContext(model: string): string {
   const notes = listNotes(model);
   out.push(`\nKNOWLEDGE NOTES (${notes.length}), written by the people who designed, built or service the machine:`);
   for (const n of notes) {
-    const type = NOTE_TYPES.find((t) => t.id === n.type)?.label ?? n.type;
+    const type = n.types.map((id) => NOTE_TYPES.find((t) => t.id === id)?.label ?? id).join(' / ');
     out.push(`- [${type}] about ${n.parts.map(label).join(', ')} — by ${n.author || 'an unknown author'} (${n.updatedAt.slice(0, 10)}): ${n.text}`);
   }
   if (notes.length === 0) out.push('(none yet)');

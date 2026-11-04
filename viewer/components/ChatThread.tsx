@@ -17,8 +17,8 @@ export default function ChatThread({ model, selected, suggestions, intro, width,
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMessages([]); }, [model]);
-  useEffect(() => () => abort.current?.abort(), []);
   const asked = useRef(false);
+  useEffect(() => () => { abort.current?.abort(); asked.current = false; }, []); // also on dev double-mount, so the first question is sent again
   useEffect(() => { // a question handed over from the home screen is sent once
     if (initialQuestion && !asked.current) { asked.current = true; send(initialQuestion); }
   }, [initialQuestion]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -140,6 +140,7 @@ button:disabled { opacity:.4; cursor:default; }
 .kn { display:flex; flex-direction:column; gap:var(--s-3); border-top:1px solid var(--line); padding-top:var(--s-3); }
 .kn h3 { margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--dim); display:flex; gap:var(--s-2); }
 .kn h3 span { color:var(--accent); }
+.kn-target { font-weight:600; font-size:15px; overflow-wrap:anywhere; }
 .kn h4 { margin:var(--s-2) 0 0; font-size:11px; color:var(--dim); font-weight:500; }
 .kn-form { display:flex; flex-direction:column; gap:var(--s-2); }
 .kn-textwrap { position:relative; }
@@ -505,14 +506,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .ask-field button:disabled { opacity:1; background:var(--accent-soft); border-color:transparent; color:var(--accent); }
 .ask-form { margin:var(--s-3); }
 
-/* chat page */
-.chatpage { height:100vh; display:flex; flex-direction:column; }
-.chat-machine { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:var(--radius); padding:var(--s-1) var(--s-2); font:inherit; max-width:280px; }
-.chat-window { position:relative; flex:1; min-height:0; width:min(760px, 100% - 2 * var(--s-4)); margin:var(--s-4) auto; }
-
+/* home chat: a column docked to the right, the library makes room for it */
+.home-chat { position:fixed; top:64px; right:var(--s-4); bottom:var(--s-4); width:400px; max-width:calc(100% - 2 * var(--s-4)); z-index:6; background:var(--panel); }
+.home-chat .ask-head { cursor:default; }
+.library.chat-open > :not(.topbar):not(.home-chat) { margin-right:calc(400px + 2 * var(--s-4)); }
 /* home: ask field */
 .library { padding-bottom: 88px; }
 .home-ask { position:fixed; right:var(--s-5); bottom:var(--s-5); z-index:5; width:min(420px, 100% - 2 * var(--s-4)); }
 .card-name { display:flex; align-items:center; gap:var(--s-2); }
 .card-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .card-name .pill { flex:none; font-size:11px; font-weight:500; padding:1px var(--s-2); border-radius:999px; background:var(--tag); color:var(--dim); }
+.kn-typebtn.auto { border-style:dashed; }
+.kn-sec { display:flex; flex-direction:column; gap:var(--s-2); padding-top:var(--s-2); border-top:1px solid var(--line); }
+.kn-sec h4 { margin:0; display:flex; align-items:center; gap:var(--s-2); }
+.kn-sec .kn-hint { margin:0; }
+.kn-count { color:var(--dim); font-size:11px; }
+.kn-none { margin:0; color:var(--dim); font-size:12px; font-style:italic; }

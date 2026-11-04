@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMode } from '@/lib/mode';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
 import { BookOpen, History, ListChecks, Mic, Network, Plus } from 'lucide-react';
 import AskField from './AskField';
+import Chat from './Chat';
 import AddFilesDialog from './AddFilesDialog';
 import { Skeleton, SkeletonCards } from './Skeleton';
 import TopBar from './TopBar';
@@ -39,8 +39,8 @@ export default function Library() {
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState('');
   const mode = useMode();
-  const router = useRouter();
   const [ask, setAsk] = useState('');
+  const [chat, setChat] = useState<string | null>(null); // question that opened the chat overlay
   const [summary, setSummary] = useState<Record<string, { title: string; notes: number; authors: string[]; named: number; buildYear: string; updatedAt: string }>>({});
   useEffect(() => { fetch('/api/summary').then((r) => r.json()).then(setSummary).catch(() => {}); }, [reload]);
 
@@ -80,7 +80,7 @@ export default function Library() {
   const shown = models?.filter((m) => !q || m.path.toLowerCase().includes(q));
 
   return (
-    <div className="library">
+    <div className={`library${chat !== null ? ' chat-open' : ''}`}>
       {adding && <AddFilesDialog onClose={() => setAdding(false)} onUploaded={() => setReload((n) => n + 1)} />}
       <TopBar home={false} search={{ value: query, onChange: setQuery, placeholder: 'Search machines…' }} actions={mode === 'creator' ? <button className="btn" onClick={() => setAdding(true)}><Plus className="ic" size={16} /> Add</button> : undefined}>
         <h1 className="topbar-title">Machines</h1>
@@ -118,8 +118,10 @@ export default function Library() {
           );
         })}
       </div>
-      <AskField className="home-ask" value={ask} onChange={setAsk} placeholder="Ask about your machines…"
-        onSubmit={() => { if (ask.trim()) router.push('/chat?q=' + encodeURIComponent(ask.trim())); }} />
+      {chat === null
+        ? <AskField className="home-ask" value={ask} onChange={setAsk} placeholder="Ask about your machines…"
+            onSubmit={() => { if (ask.trim()) { setChat(ask.trim()); setAsk(''); } }} />
+        : <Chat initialQuestion={chat} onClose={() => setChat(null)} />}
     </div>
   );
 }

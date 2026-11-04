@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeType, type Note } from './noteTypes';
+import { cleanTypes, normalizeType, type Note } from './noteTypes';
 
 // Knowledge notes, stored as { [modelPath]: Note[] }. A JSON file is plenty while this is a playground.
 const FILE = path.join(process.cwd(), 'data', 'notes.json');
@@ -11,7 +11,12 @@ type Store = Record<string, Note[]>;
 function read(): Store {
   try {
     const store: Store = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-    for (const notes of Object.values(store)) for (const n of notes) n.type = normalizeType(n.type);
+    for (const notes of Object.values(store)) for (const n of notes) {
+      const legacy = (n as { type?: string }).type;
+      n.types = cleanTypes(n.types);
+      if (n.types.length === 0) n.types = [normalizeType(legacy ?? '')];
+      delete (n as { type?: string }).type;
+    }
     return store;
   } catch { return {}; }
 }

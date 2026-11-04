@@ -2,7 +2,7 @@ import { after } from 'next/server';
 import { deleteNote, listNotes, saveNote } from '@/lib/notes';
 import { classifyNote } from '@/lib/classify';
 import { keepManual, reindexModel } from '@/lib/mentions';
-import { isNoteType, isStale } from '@/lib/noteTypes';
+import { cleanTypes, isStale } from '@/lib/noteTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +14,8 @@ export function GET(req: Request) {
   return Response.json(notes);
 }
 
-// Create (no id) or update (with id). The category is the one the author picked; without one it is
-// assigned automatically (an edit that doesn't change the text keeps its existing category). Mentions of parts are found afterwards by
+// Create (no id) or update (with id). The labels are the ones the author picked; without any they are
+// assigned automatically (an edit that doesn't change the text keeps its existing labels). Mentions of parts are found afterwards by
 // the background indexer; the response carries whatever is known now (`indexedAt` older than
 // `updatedAt` tells the client to look again shortly).
 export async function PUT(req: Request) {
@@ -25,11 +25,12 @@ export async function PUT(req: Request) {
   if (!valid) return new Response('invalid note', { status: 400 });
   const text = note.text.trim();
   const existing = typeof note.id === 'string' ? listNotes(model).find((n) => n.id === note.id) : undefined;
-  const type = isNoteType(note.type) ? note.type : existing && existing.text === text ? existing.type : await classifyNote(text);
+  const picked = cleanTypes(note.types);
+  const types = picked.length ? picked : existing && existing.text === text ? existing.types : await classifyNote(text);
   const same = existing?.text === text;
   const overrides = Array.isArray(note.overrides) ? keepManual(text, note.overrides) : undefined;
   const saved = saveNote(model, {
-    id: existing?.id, text, type, parts: note.parts, author: String(note.author ?? '').trim(),
+    id: existing?.id, text, types, parts: note.parts, author: String(note.author ?? '').trim(),
     mentions: overrides ?? (same ? existing?.mentions : keepManual(text, existing?.mentions)),
     indexedAt: same && !overrides ? existing?.indexedAt : undefined,
   });

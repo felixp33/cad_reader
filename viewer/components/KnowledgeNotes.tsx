@@ -57,10 +57,10 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
   const direct = notes.filter((n) => n.parts.includes(target));
   const inherited = notes.filter((n) => !n.parts.includes(target) && n.parts.some((p) => inheritedFrom.includes(p)));
 
-  const card = (n: Note, from?: string) => (
+  const card = (n: Note, from?: string, skipType?: NoteType) => (
     <div key={n.id} className={`kn-card${from ? ' inherited' : ''}`}>
       <div className="kn-meta">
-        <span className={`kn-type t-${n.type}`}>{typeLabel(n.type)}</span>
+        {n.types.filter((t) => t !== skipType).map((t) => <span key={t} className={`kn-type t-${t}`}>{typeLabel(t)}</span>)}
         {from && <span className="kn-from">via {from}</span>}
       </div>
       <p><LinkedText text={n.text} mentions={n.mentions} label={partLabel} onOpen={onOpenPart} /></p>
@@ -88,10 +88,37 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
     </div>
   );
 
+  // Consumers get a report card: the notes of the machine (or the selected part) sorted under the labels.
+  // On the machine itself that is every note about any part.
+  const report: { note: Note; from?: string }[] = readOnly
+    ? target === MACHINE
+      ? notes.map((note) => ({ note }))
+      : [...direct.map((note) => ({ note })), ...inherited.map((note) => ({ note, from: partLabel(note.parts.find((p) => inheritedFrom.includes(p))!) }))]
+    : [];
+
+  if (readOnly) return (
+    <section className="kn">
+      <h3>Knowledge <span>{report.length}</span></h3>
+      <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+      {NOTE_TYPES.map((t) => {
+        const items = report.filter((r) => r.note.types.includes(t.id));
+        return (
+          <div key={t.id} className="kn-sec">
+            <h4><span className={`kn-type t-${t.id}`}>{t.label}</span> <span className="kn-count">{items.length}</span></h4>
+            <p className="kn-hint">{t.hint}</p>
+            {items.length === 0 ? <p className="kn-none">Nothing recorded yet.</p> : items.map((r) => card(r.note, r.from, t.id))}
+          </div>
+        );
+      })}
+      {authorOpen && <AuthorPopup name={authorOpen} onClose={() => setAuthorOpen(null)} />}
+    </section>
+  );
+
   return (
     <section className="kn">
       <h3>Knowledge notes <span>{direct.length}</span></h3>
-      {!readOnly && <NoteForm
+      <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+      <NoteForm
         key={editing?.id ?? `new-${target}-${draft}`}
         target={target}
         initial={editing}
@@ -99,8 +126,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
         onSave={onSave}
         onCreated={setActiveId}
         onDone={() => { setEditing(null); setActiveId(null); setDraft((d) => d + 1); }}
-      />}
-      {readOnly && direct.length + inherited.length === 0 && <p className="kn-hint">Nobody has added notes here yet.</p>}
+      />
       {direct.filter((n) => n.id !== beingEdited).map((n) => card(n))}
       {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
       {inherited.map((n) => card(n, partLabel(n.parts.find((p) => inheritedFrom.includes(p))!)))}
@@ -120,7 +146,10 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   onSave: (n: NoteInput) => Promise<Note>; onCreated: (id: string) => void; onDone: () => void;
 }) {
   const [text, setText] = useState(initial?.text ?? '');
-  const [type, setType] = useState<NoteType | null>(initial?.type ?? null); // null = let the server pick one
+  const [picked, setPicked] = useState<NoteType[] | null>(initial?.types ?? null); // null = let the server choose the labels
+  const [auto, setAuto] = useState<NoteType[]>([]); // what it chose for a new note
+  const shown = picked ?? auto;
+  const toggle = (t: NoteType) => { const next = shown.includes(t) ? shown.filter((x) => x !== t) : [...shown, t]; setPicked(next.length ? next : null); };
   const links = initial?.parts ?? [target]; // a note is about what was selected when it was written
   const user = useUser();
   const author = initial?.author || user.name;
@@ -131,7 +160,7 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   const [overrides, setOverrides] = useState<Mention[] | null>(null);
   const textSame = !!initial && text.trim() === initial.text;
   const manual = overrides ?? (initial?.mentions ?? []).filter((m) => m.manual);
-  const shown = [...manual, ...(initial?.mentions ?? []).filter((a) => !a.manual && !manual.some((m) => overlaps(a, m)))].sort((a, b) => a.start - b.start);
+  const linked = [...manual, ...(initial?.mentions ?? []).filter((a) => !a.manual && !manual.some((m) => overlaps(a, m)))].sort((a, b) => a.start - b.start);
   const setMention = (m: Mention, parts: string[] | null) => {
     const rest = manual.filter((x) => !overlaps(x, m));
     setOverrides(parts ? [...rest, { start: m.start, end: m.end, text: m.text, parts, manual: true }] : rest);
@@ -141,19 +170,20 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   // Saves run one after another so a new note is created once, and later saves reuse its id.
   const id = useRef(initial?.id);
   const queue = useRef(Promise.resolve());
-  const lastSaved = useRef(initial ? JSON.stringify([initial.text, initial.type, null]) : '');
+  const lastSaved = useRef(initial ? JSON.stringify([initial.text, initial.types, null]) : '');
   const latest = useRef<NoteInput | null>(null);
-  latest.current = text.trim() && links.length ? { text, parts: links, author, type: type ?? undefined, overrides: textSame && overrides ? overrides : undefined } : null;
+  latest.current = text.trim() && links.length ? { text, parts: links, author, types: picked ?? undefined, overrides: textSame && overrides ? overrides : undefined } : null;
 
   const flush = useCallback(() => {
     queue.current = queue.current.then(async () => {
       const input = armed.current ? latest.current : null;
-      const key = input && JSON.stringify([input.text.trim(), input.type ?? null, input.overrides ?? null]);
+      const key = input && JSON.stringify([input.text.trim(), input.types ?? null, input.overrides ?? null]);
       if (!input || key === lastSaved.current) return;
       setSaveState('saving');
       try {
         const saved = await onSave({ ...input, id: id.current });
         id.current = saved.id;
+        setAuto(saved.types);
         setCreated(true);
         onCreated(saved.id);
         lastSaved.current = key!;
@@ -165,7 +195,7 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   useEffect(() => {
     const t = setTimeout(flush, AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [text, type, overrides, flush]);
+  }, [text, picked, overrides, flush]);
   useEffect(() => () => flush(), [flush]); // save pending changes when the form goes away
 
   const create = () => { armed.current = true; flush(); };
@@ -178,14 +208,14 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
 
   return (
     <div className="kn-form">
-      <div className="kn-types" role="radiogroup" aria-label="Category">
+      <div className="kn-types" role="group" aria-label="Labels">
         {NOTE_TYPES.map((t) => (
-          <button key={t.id} type="button" role="radio" aria-checked={type === t.id} title={t.hint}
-            className={`kn-typebtn t-${t.id}${type === t.id ? ' on' : ''}`} onClick={() => setType(type === t.id ? null : t.id)}>{t.label}</button>
+          <button key={t.id} type="button" aria-pressed={shown.includes(t.id)} title={t.hint}
+            className={`kn-typebtn t-${t.id}${shown.includes(t.id) ? ' on' : ''}${picked === null && shown.includes(t.id) ? ' auto' : ''}`} onClick={() => toggle(t.id)}>{t.label}</button>
         ))}
       </div>
       <div className="kn-textwrap">
-        <textarea value={text} rows={5} placeholder="Pick a category above (or leave it and one is suggested). Why is it built this way? What are the requirements? What did you learn?" onChange={(e) => setText(e.target.value)} />
+        <textarea value={text} rows={5} placeholder="Just write what you know: why it is built this way, what it has to fulfil, what went wrong, what to keep in mind. Labels are added for you — or pick your own above." onChange={(e) => setText(e.target.value)} />
         {dictation.supported && (
           <button className={`kn-mic${dictation.listening ? ' live' : ''}`} onClick={dictation.toggle} title={dictation.listening ? 'Stop dictation' : 'Dictate'} aria-label="Dictate">
             {dictation.listening ? <Square size={13} /> : <Mic size={15} />}
@@ -196,10 +226,10 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
       {dictation.error && <div className="kn-error">{dictation.error}</div>}
       {!dictation.supported && <div className="kn-hint">Dictation needs Chrome or Safari.</div>}
       {initial && (
-        textSame ? shown.length > 0 && (
+        textSame ? linked.length > 0 && (
           <div className="kn-links">
             <span className="kn-label">Linked words — pick the right part, or unlink</span>
-            {shown.map((m) => m.parts.length === 0 ? (
+            {linked.map((m) => m.parts.length === 0 ? (
               <div key={m.start} className="kn-mention off"><s>{m.text}</s><button onClick={() => setMention(m, null)}>Link again</button></div>
             ) : (
               <div key={m.start} className="kn-mention">
