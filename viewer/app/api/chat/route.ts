@@ -1,11 +1,12 @@
-import { machineContext } from '@/lib/machineContext';
+import { libraryContext, machineContext } from '@/lib/machineContext';
+import { ALL_MACHINES } from '@/lib/noteTypes';
 
 export const dynamic = 'force-dynamic';
 
 const MODEL = process.env.OPENAI_MODEL || 'sol-5.6';
 
 const SYSTEM = `You are an assistant that helps people understand one machine, using ONLY the briefing below.
-The briefing lists the machine's parts and the knowledge notes its creators wrote.
+The briefing may cover several machines; say which machine you are talking about. It lists the machine's parts and the knowledge notes its creators wrote.
 - Answer from the briefing. If it does not say, say you don't know instead of guessing.
 - When you use a note, mention who wrote it (by name) so the reader can follow up with them.
 - Refer to parts by their given names. Keep answers short and concrete.
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       model: MODEL,
       stream: true,
-      messages: [{ role: 'system', content: `${SYSTEM}${focus}\n\n--- BRIEFING ---\n${machineContext(model)}` }, ...history],
+      messages: [{ role: 'system', content: `${SYSTEM}${focus}\n\n--- BRIEFING ---\n${model === ALL_MACHINES ? libraryContext() : machineContext(model)}` }, ...history],
     }),
   });
   if (!upstream.ok || !upstream.body) {

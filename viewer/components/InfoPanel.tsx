@@ -31,6 +31,7 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
   onRemoveNote: (id: string) => Promise<void>;
 }) {
   const [saved, setSaved] = useState(true);
+  const [year, setYear] = useState('');
   const readOnly = useMode() === 'consumer';
   const [open, setOpen] = useState(true); // general information card expanded
   const pending = useRef<string | null>(null);
@@ -51,11 +52,13 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
     let cancelled = false;
     flush().then(() => fetch('/api/info?model=' + encodeURIComponent(model)))
       .then((r) => r.json())
-      .then((i: { title: string }) => { if (!cancelled) onTitleChange(i.title); });
+      .then((i: { title: string; buildYear: string }) => { if (!cancelled) { onTitleChange(i.title); setYear(i.buildYear); } });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model]);
   useEffect(() => () => { flush(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveYear = () => { if (model) fetch('/api/info', { method: 'PUT', body: JSON.stringify({ model, buildYear: year }) }); };
 
   const editTitle = (value: string) => {
     onTitleChange(value);
@@ -112,10 +115,15 @@ export default function InfoPanel({ model, root, mainIds, selected, label, names
             ) : (
               <>
                 {readOnly
-                  ? <ReadOnlyField label="Name" value={title} empty="Not named yet" />
-                  : <label>Name
-                      <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
-                    </label>}
+                  ? <><ReadOnlyField label="Name" value={title} empty="Not named yet" /><ReadOnlyField label="Build year" value={year} empty="Not set" /></>
+                  : <>
+                      <label>Name
+                        <input value={title} placeholder="Machine name" onChange={(e) => editTitle(e.target.value)} />
+                      </label>
+                      <label>Build year
+                        <input value={year} inputMode="numeric" maxLength={4} placeholder="e.g. 2019" onChange={(e) => setYear(e.target.value.replace(/\D/g, ''))} onBlur={saveYear} />
+                      </label>
+                    </>}
               </>
             )}
             <Coverage stats={stats} />

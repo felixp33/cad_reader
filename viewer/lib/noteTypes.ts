@@ -1,15 +1,20 @@
 // Shared (client + server) definitions for knowledge notes.
 export const MACHINE = '__machine__'; // link target meaning "the machine as a whole"
+export const ALL_MACHINES = '__all__'; // chat target meaning "every machine in the library"
 
 export const NOTE_TYPES = [
-  { id: 'decision', label: 'Design decision', hint: 'Why it is built this way' },
-  { id: 'failed', label: 'Failed / lesson learned', hint: 'What did not work, and why' },
-  { id: 'predecessor', label: 'Predecessor / related', hint: 'How earlier or similar machines differ' },
-  { id: 'tip', label: 'Operating / maintenance tip', hint: 'Things to know when running or servicing it' },
-  { id: 'constraint', label: 'Constraint', hint: 'Requirements or limits that shaped the design' },
-  { id: 'other', label: 'Other', hint: '' },
+  { id: 'lesson', label: 'Lessons learned', hint: 'What did not work or went wrong, and what we learned from it' },
+  { id: 'requirement', label: 'Requirements', hint: 'What the machine has to do or comply with' },
+  { id: 'consideration', label: 'Considerations', hint: 'Things to keep in mind, trade-offs, tips for operating or changing it' },
+  { id: 'decision', label: 'Design decisions', hint: 'Why it is built this way, and what was chosen over what' },
 ] as const;
 export type NoteType = (typeof NOTE_TYPES)[number]['id'];
+
+export const isNoteType = (t: unknown): t is NoteType => NOTE_TYPES.some((x) => x.id === t);
+
+// Categories used before the current set, mapped onto it (applied when notes are read).
+const LEGACY: Record<string, NoteType> = { failed: 'lesson', constraint: 'requirement', predecessor: 'consideration', tip: 'consideration', other: 'consideration' };
+export const normalizeType = (t: string): NoteType => (isNoteType(t) ? t : LEGACY[t] ?? 'consideration');
 
 // A span of a note's text that refers to one or more parts. Found by the background indexer, unless
 // `manual` (set by a person); a manual mention with no parts means "do not link this word".

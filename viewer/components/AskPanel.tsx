@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUp, Sparkles, X } from 'lucide-react';
-
-type Msg = { role: 'user' | 'assistant'; content: string };
+import { useEffect, useRef, useState } from 'react';
+import { Sparkles, X } from 'lucide-react';
+import ChatThread from './ChatThread';
 
 // Size limits: roughly half to one-and-a-half times the default 400 × 520.
 const DEFAULT = { w: 400, h: 520 };
@@ -14,25 +13,10 @@ const SUGGESTIONS = ['Give me a short overview of this machine.', 'Which design 
 
 // Chat overlay for consumers: ask questions about the machine and the information attached to it.
 export default function AskPanel({ model, selected, onClose }: { model: string; selected: { id: string; label: string } | null; onClose: () => void }) {
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [input, setInput] = useState('');
-  const [busy, setBusy] = useState(false);
-  const abort = useRef<AbortController | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
   const [size, setSize] = useState(DEFAULT);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const host = () => rootRef.current!.closest('main')!;
-
-  // The field grows with its text, up to three rows (the CSS max-height), then scrolls.
-  useLayoutEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
-  }, [input, size.w]);
 
   // Starts at the bottom-right of the 3D area, clear of the info column and the path bar.
   useEffect(() => {
@@ -78,66 +62,14 @@ export default function AskPanel({ model, selected, onClose }: { model: string; 
     });
   };
 
-  useEffect(() => { setMessages([]); }, [model]);
-  useEffect(() => () => abort.current?.abort(), []);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages]);
-
-  const send = async (text: string) => {
-    const q = text.trim();
-    if (!q || busy) return;
-    const history: Msg[] = [...messages, { role: 'user', content: q }];
-    setMessages([...history, { role: 'assistant', content: '' }]);
-    setInput('');
-    setBusy(true);
-    const ctl = new AbortController();
-    abort.current = ctl;
-    const timeout = setTimeout(() => ctl.abort('timeout'), 60_000); // no answer at all within a minute
-    const write = (content: string) => setMessages((m) => [...m.slice(0, -1), { role: 'assistant', content }]);
-    try {
-      const res = await fetch('/api/chat', { method: 'POST', signal: ctl.signal, body: JSON.stringify({ model, messages: history, selected: selected && { id: selected.id, label: selected.label } }) });
-      if (!res.ok || !res.body) { write(await res.text() || 'Something went wrong.'); return; }
-      const reader = res.body.getReader(), decoder = new TextDecoder();
-      let answer = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        clearTimeout(timeout); // an answer has started, so it is no longer "no answer at all"
-        answer += decoder.decode(value, { stream: true });
-        write(answer);
-      }
-      if (!answer) write('No answer came back.');
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') write('The connection failed. Please try again.');
-      else if (ctl.signal.reason === 'timeout') write('The assistant took too long to answer. Please try again.');
-    } finally {
-      clearTimeout(timeout);
-      setBusy(false);
-    }
-  };
-
   return (
     <section ref={rootRef} className="ask" aria-label="Ask about this machine" style={{ width: size.w, height: size.h, left: pos?.x ?? 0, top: pos?.y ?? 0, visibility: pos ? 'visible' : 'hidden' }}>
       <header className="ask-head" onPointerDown={startMove}>
         <Sparkles className="ic" size={16} /> <strong>Ask about this machine</strong>
         <button className="icon-btn" onClick={onClose} aria-label="Close"><X className="ic" size={16} /></button>
       </header>
-      <div className="ask-log" aria-live="polite">
-        {messages.length === 0 && (
-          <div className="ask-empty">
-            <p>Ask anything about the machine, its parts and the notes people have left.{selected && <> The selected part (<b>{selected.label}</b>) is used as context.</>}</p>
-            {SUGGESTIONS.map((s) => <button key={s} className="ask-suggest" onClick={() => send(s)}>{s}</button>)}
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`ask-msg ${m.role}`}>{m.content || <span className="ask-dots" aria-label="Thinking"><i /><i /><i /></span>}</div>
-        ))}
-        <div ref={endRef} />
-      </div>
-      <form className="ask-form" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <textarea ref={inputRef} rows={1} value={input} placeholder="Ask a question…" aria-label="Question" onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }} />
-        <button className="btn primary icon-btn" disabled={busy || !input.trim()} aria-label="Send"><ArrowUp className="ic" size={16} /></button>
-      </form>
+      <ChatThread model={model} selected={selected} suggestions={SUGGESTIONS} width={size.w}
+        intro={<p>Ask anything about the machine, its parts and the notes people have left.{selected && <> The selected part (<b>{selected.label}</b>) is used as context.</>}</p>} />
       {['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((edge) => (
         <div key={edge} className={`iso-h iso-h-${edge}`} onPointerDown={startResize(edge)} />
       ))}

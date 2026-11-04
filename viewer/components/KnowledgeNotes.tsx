@@ -120,6 +120,7 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   onSave: (n: NoteInput) => Promise<Note>; onCreated: (id: string) => void; onDone: () => void;
 }) {
   const [text, setText] = useState(initial?.text ?? '');
+  const [type, setType] = useState<NoteType | null>(initial?.type ?? null); // null = let the server pick one
   const links = initial?.parts ?? [target]; // a note is about what was selected when it was written
   const user = useUser();
   const author = initial?.author || user.name;
@@ -140,14 +141,14 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   // Saves run one after another so a new note is created once, and later saves reuse its id.
   const id = useRef(initial?.id);
   const queue = useRef(Promise.resolve());
-  const lastSaved = useRef(initial ? JSON.stringify([initial.text, null]) : '');
+  const lastSaved = useRef(initial ? JSON.stringify([initial.text, initial.type, null]) : '');
   const latest = useRef<NoteInput | null>(null);
-  latest.current = text.trim() && links.length ? { text, parts: links, author, overrides: textSame && overrides ? overrides : undefined } : null;
+  latest.current = text.trim() && links.length ? { text, parts: links, author, type: type ?? undefined, overrides: textSame && overrides ? overrides : undefined } : null;
 
   const flush = useCallback(() => {
     queue.current = queue.current.then(async () => {
       const input = armed.current ? latest.current : null;
-      const key = input && JSON.stringify([input.text.trim(), input.overrides ?? null]);
+      const key = input && JSON.stringify([input.text.trim(), input.type ?? null, input.overrides ?? null]);
       if (!input || key === lastSaved.current) return;
       setSaveState('saving');
       try {
@@ -164,7 +165,7 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
   useEffect(() => {
     const t = setTimeout(flush, AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [text, overrides, flush]);
+  }, [text, type, overrides, flush]);
   useEffect(() => () => flush(), [flush]); // save pending changes when the form goes away
 
   const create = () => { armed.current = true; flush(); };
@@ -177,8 +178,14 @@ function NoteForm({ target, initial, names, onSave, onCreated, onDone }: {
 
   return (
     <div className="kn-form">
+      <div className="kn-types" role="radiogroup" aria-label="Category">
+        {NOTE_TYPES.map((t) => (
+          <button key={t.id} type="button" role="radio" aria-checked={type === t.id} title={t.hint}
+            className={`kn-typebtn t-${t.id}${type === t.id ? ' on' : ''}`} onClick={() => setType(type === t.id ? null : t.id)}>{t.label}</button>
+        ))}
+      </div>
       <div className="kn-textwrap">
-        <textarea value={text} rows={5} placeholder="Why is it built this way? What changed from the predecessor? What didn't work?" onChange={(e) => setText(e.target.value)} />
+        <textarea value={text} rows={5} placeholder="Pick a category above (or leave it and one is suggested). Why is it built this way? What are the requirements? What did you learn?" onChange={(e) => setText(e.target.value)} />
         {dictation.supported && (
           <button className={`kn-mic${dictation.listening ? ' live' : ''}`} onClick={dictation.toggle} title={dictation.listening ? 'Stop dictation' : 'Dictate'} aria-label="Dictate">
             {dictation.listening ? <Square size={13} /> : <Mic size={15} />}

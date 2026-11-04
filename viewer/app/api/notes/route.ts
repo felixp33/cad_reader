@@ -2,7 +2,7 @@ import { after } from 'next/server';
 import { deleteNote, listNotes, saveNote } from '@/lib/notes';
 import { classifyNote } from '@/lib/classify';
 import { keepManual, reindexModel } from '@/lib/mentions';
-import { isStale } from '@/lib/noteTypes';
+import { isNoteType, isStale } from '@/lib/noteTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +14,8 @@ export function GET(req: Request) {
   return Response.json(notes);
 }
 
-// Create (no id) or update (with id). The category is assigned automatically; an edit that
-// doesn't change the text keeps its existing category. Mentions of parts are found afterwards by
+// Create (no id) or update (with id). The category is the one the author picked; without one it is
+// assigned automatically (an edit that doesn't change the text keeps its existing category). Mentions of parts are found afterwards by
 // the background indexer; the response carries whatever is known now (`indexedAt` older than
 // `updatedAt` tells the client to look again shortly).
 export async function PUT(req: Request) {
@@ -25,7 +25,7 @@ export async function PUT(req: Request) {
   if (!valid) return new Response('invalid note', { status: 400 });
   const text = note.text.trim();
   const existing = typeof note.id === 'string' ? listNotes(model).find((n) => n.id === note.id) : undefined;
-  const type = existing && existing.text === text ? existing.type : await classifyNote(text);
+  const type = isNoteType(note.type) ? note.type : existing && existing.text === text ? existing.type : await classifyNote(text);
   const same = existing?.text === text;
   const overrides = Array.isArray(note.overrides) ? keepManual(text, note.overrides) : undefined;
   const saved = saveNote(model, {

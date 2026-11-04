@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Note } from './noteTypes';
+import { normalizeType, type Note } from './noteTypes';
 
 // Knowledge notes, stored as { [modelPath]: Note[] }. A JSON file is plenty while this is a playground.
 const FILE = path.join(process.cwd(), 'data', 'notes.json');
@@ -9,7 +9,11 @@ const FILE = path.join(process.cwd(), 'data', 'notes.json');
 type Store = Record<string, Note[]>;
 
 function read(): Store {
-  try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { return {}; }
+  try {
+    const store: Store = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    for (const notes of Object.values(store)) for (const n of notes) n.type = normalizeType(n.type);
+    return store;
+  } catch { return {}; }
 }
 function write(store: Store) {
   fs.mkdirSync(path.dirname(FILE), { recursive: true });

@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isStale, type Mention, type Note } from './noteTypes';
+import { isStale, type Mention, type Note, type NoteType } from './noteTypes';
 
-export type NoteInput = Pick<Note, 'text' | 'parts' | 'author'> & { id?: string; overrides?: Mention[] };
+export type NoteInput = Pick<Note, 'text' | 'parts' | 'author'> & { id?: string; type?: NoteType; overrides?: Mention[] };
 
 const POLL_MS = 800;
 const MAX_POLLS = 10;

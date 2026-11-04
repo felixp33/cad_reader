@@ -4,8 +4,8 @@ import { getAliases } from './aliases';
 import { getInfo } from './info';
 import { getNames } from './names';
 import { listNotes } from './notes';
-import { CACHE_DIR, cacheId, resolveModel } from './project';
-import { MACHINE, NOTE_TYPES } from './noteTypes';
+import { CACHE_DIR, cacheId, listModels, resolveModel } from './project';
+import { ALL_MACHINES, MACHINE, NOTE_TYPES } from './noteTypes';
 
 type TreeNode = { name: string; children?: TreeNode[] };
 
@@ -18,6 +18,7 @@ export function machineContext(model: string): string {
   const out: string[] = [];
 
   out.push(`MACHINE: ${info.title || path.basename(model)} (file ${path.basename(model)})`);
+  if (info.buildYear) out.push(`Build year: ${info.buildYear}`);
   if (info.description) out.push(`Description: ${info.description}`);
 
   // Assembly structure from the converted model, if it has been converted: top levels only.
@@ -49,3 +50,7 @@ export function machineContext(model: string): string {
   if (notes.length === 0) out.push('(none yet)');
   return out.join('\n');
 }
+
+// Briefings for all machines, one after another (each already names its machine).
+export const libraryContext = (): string =>
+  listModels().map((m) => machineContext(m.path)).join('\n\n=========\n\n') || '(no machines yet)';

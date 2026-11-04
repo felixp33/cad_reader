@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMode } from '@/lib/mode';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
 import { BookOpen, History, ListChecks, Mic, Network, Plus } from 'lucide-react';
+import AskField from './AskField';
 import AddFilesDialog from './AddFilesDialog';
 import { Skeleton, SkeletonCards } from './Skeleton';
 import TopBar from './TopBar';
@@ -37,7 +39,9 @@ export default function Library() {
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState('');
   const mode = useMode();
-  const [summary, setSummary] = useState<Record<string, { title: string; notes: number; authors: string[]; named: number }>>({});
+  const router = useRouter();
+  const [ask, setAsk] = useState('');
+  const [summary, setSummary] = useState<Record<string, { title: string; notes: number; authors: string[]; named: number; buildYear: string; updatedAt: string }>>({});
   useEffect(() => { fetch('/api/summary').then((r) => r.json()).then(setSummary).catch(() => {}); }, [reload]);
 
   const setPreview = (path: string, p: Preview) => setPreviews((prev) => ({ ...prev, [path]: p }));
@@ -101,12 +105,12 @@ export default function Library() {
                 {pv?.state === 'error' && <span title={pv.message}>Preview failed</span>}
               </Link>
               <div className="card-info">
-                <div className="card-name" title={m.path}>{summary[m.path]?.title || m.path.split('/').pop()}</div>
+                <div className="card-name" title={m.path}><span className="card-title">{summary[m.path]?.title || m.path.split('/').pop()}</span>{summary[m.path]?.buildYear && <span className="pill" title="Build year">{summary[m.path].buildYear}</span>}</div>
                 <small>{(m.size / 1e6).toFixed(1)} MB · {m.path.split('/').pop()}</small>
-                {summary[m.path] && (summary[m.path].notes > 0 || summary[m.path].named > 0) ? (
+                {summary[m.path] && (summary[m.path].notes > 0 || summary[m.path].updatedAt) ? (
                   <small className="card-contrib">
-                    {summary[m.path].notes} note{summary[m.path].notes === 1 ? '' : 's'} · {summary[m.path].named} named part{summary[m.path].named === 1 ? '' : 's'}
-                    {summary[m.path].authors.length > 0 && <> · {summary[m.path].authors.join(', ')}</>}
+                    {summary[m.path].notes} note{summary[m.path].notes === 1 ? '' : 's'}
+                    {summary[m.path].updatedAt && <> · edited {new Date(summary[m.path].updatedAt).toLocaleDateString()}</>}
                   </small>
                 ) : mode === 'consumer' ? <small className="card-contrib">No information yet</small> : null}
               </div>
@@ -114,6 +118,8 @@ export default function Library() {
           );
         })}
       </div>
+      <AskField className="home-ask" value={ask} onChange={setAsk} placeholder="Ask about your machines…"
+        onSubmit={() => { if (ask.trim()) router.push('/chat?q=' + encodeURIComponent(ask.trim())); }} />
     </div>
   );
 }

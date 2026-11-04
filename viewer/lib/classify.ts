@@ -1,12 +1,12 @@
-import { NOTE_TYPES, type NoteType } from './noteTypes';
+import { NOTE_TYPES, isNoteType, type NoteType } from './noteTypes';
 
 const MODEL = process.env.OPENAI_MODEL || 'sol-5.6';
 
-// Asks the model which category a note belongs to. Falls back to 'other' when there is no API key
+// Asks the model which category a note belongs to. Falls back to 'consideration' when there is no API key
 // or the call fails, so saving a note never depends on the API being reachable.
 export async function classifyNote(text: string): Promise<NoteType> {
   const key = process.env.OPENAI_API_KEY;
-  if (!key) return 'other';
+  if (!key) return 'consideration';
   const list = NOTE_TYPES.map((t) => `- ${t.id}: ${t.label}${t.hint ? ` (${t.hint})` : ''}`).join('\n');
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -22,12 +22,12 @@ export async function classifyNote(text: string): Promise<NoteType> {
         ],
       }),
     });
-    if (!res.ok) { console.error('classify failed', res.status, await res.text()); return 'other'; }
+    if (!res.ok) { console.error('classify failed', res.status, await res.text()); return 'consideration'; }
     const data = await res.json();
     const type = JSON.parse(data.choices?.[0]?.message?.content ?? '{}').type;
-    return NOTE_TYPES.some((t) => t.id === type) ? type : 'other';
+    return isNoteType(type) ? type : 'consideration';
   } catch (e) {
     console.error('classify error', e);
-    return 'other';
+    return 'consideration';
   }
 }
