@@ -9,9 +9,10 @@ import { usePanelWidths } from '@/lib/usePanelWidths';
 import { cssColor, subscribeTheme } from '@/lib/theme';
 import TopBar from './TopBar';
 import Link from 'next/link';
-import { RotateCcw, Slice, Tag, X } from 'lucide-react';
+import { Box, RotateCcw, Slice, Tag, X } from 'lucide-react';
 import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from '@/lib/scene';
 import IsolatedView from './IsolatedView';
+import { applySlice, placePlane } from '@/lib/slice';
 import { useNotes } from '@/lib/useNotes';
 import InfoPanel from './InfoPanel';
 import Toggle from './Toggle';
@@ -40,10 +41,16 @@ export default function Viewer() {
   const [loading, setLoading] = useState(false);
   const [focusNote, setFocusNote] = useState<string | null>(null); // note whose parts are the only ones shown
   const [focusCount, setFocusCount] = useState(0);
+  const [slicing, setSlicing] = useState(false);
+  const [axis, setAxis] = useState(0);
+  const [cutAt, setCutAt] = useState(0.5); // 0..1 along the machine's extent on the chosen axis
+  const [flip, setFlip] = useState(false);
+  const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(1, 0, 0), 0), []);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.localClippingEnabled = true; // for the slice tool
     renderer.setPixelRatio(devicePixelRatio);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(cssColor('--canvas-bg'));
@@ -183,6 +190,33 @@ export default function Viewer() {
     setFocusCount(entries.length);
   };
 
+  // While slicing is on, clip the machine with the plane and paint the cut.
+  useEffect(() => {
+    const model = three.current.model;
+    if (!slicing || !root || !model) return;
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
+    placePlane(plane, box, axis, cutAt, flip);
+    return applySlice(model, plane, new THREE.Color(cssColor('--accent')));
+  }, [slicing, root, axis, cutAt, flip, plane]);
+
+  // Look straight at the cut face, from the side that was removed.
+  const faceCut = () => {
+    const { model, camera, controls, canvas } = three.current;
+    if (!model) return;
+    camera.up.copy(axis === 1 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0));
+    const dir = new THREE.Vector3().setComponent(axis, flip ? 1 : -1);
+    const { center } = frameObject(camera, model, canvas.clientWidth / canvas.clientHeight, dir);
+    controls.target.copy(center);
+    controls.update();
+  };
+
+  // Face the cut whenever slicing starts or the cut's side changes (moving the plane keeps your view).
+  useEffect(() => {
+    if (slicing) faceCut();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slicing, axis, flip]);
+
   const savePartName = async (id: string, name: string) => {
     if ((names[id] ?? '') === name) return;
     setNames((n) => { const next = { ...n }; if (name) next[id] = name; else delete next[id]; return next; });
@@ -239,12 +273,24 @@ export default function Viewer() {
         <canvas ref={canvasRef} />
         <div className="toolrow" role="toolbar" aria-label="View tools">
           <button className="btn" onClick={() => { clearSelection(); showParts(null, []); fit(); }} disabled={!root} title="Frame the whole machine"><RotateCcw className="ic" size={15} /> Reset view</button>
-          <Toggle label="Wireframe" checked={wire} onChange={setWireframe} />
+          <button className="btn icon-btn" aria-pressed={slicing} aria-label="Slice" onClick={() => setSlicing((s) => !s)} disabled={!root} title="Slice: cut through the machine"><Slice className="ic" size={16} /></button>
+          <button className="btn icon-btn" aria-pressed={wire} aria-label="Wireframe" onClick={() => setWireframe(!wire)} title="Wireframe"><Box className="ic" size={16} /></button>
           <Toggle label="Given names" checked={showGiven} onChange={setShowGiven} title="Show given names in the assembly tree instead of part IDs" />
           <span className="toolrow-sep" aria-hidden />
           <Link className="btn" href={`/naming${modelQuery}`}><Tag className="ic" size={15} /> Name parts</Link>
-          <Link className="btn" href={`/section${modelQuery}`}><Slice className="ic" size={15} /> Slice</Link>
         </div>
+        {slicing && (
+          <div className="slicebar" role="group" aria-label="Slice controls">
+            <div className="segmented" role="group" aria-label="Cut axis">
+              {(['X', 'Y', 'Z'] as const).map((a, i) => <button key={a} aria-pressed={axis === i} onClick={() => setAxis(i)}>{a}</button>)}
+            </div>
+            <input type="range" min={0} max={1000} value={Math.round(cutAt * 1000)} onChange={(e) => setCutAt(+e.target.value / 1000)} aria-label="Cut position" />
+            <span className="slicebar-pct">{Math.round(cutAt * 100)}%</span>
+            <button className="btn" onClick={() => setFlip((f) => !f)}>Flip side</button>
+            <button className="btn" onClick={faceCut}>Face the cut</button>
+            <button className="btn icon-btn" onClick={() => setSlicing(false)} aria-label="Close slice" title="Close"><X className="ic" size={16} /></button>
+          </div>
+        )}
         {crumbs.length > 0 && (
           <nav className="crumbs" aria-label="Selected part path">
             {crumbs.map((e, i) => (
@@ -260,7 +306,7 @@ export default function Viewer() {
           </nav>
         )}
         {isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
-        {status && <div className="status status-top">{status}</div>}
+        {status && <div className={`status status-top${slicing ? ' below-slice' : ''}`}>{status}</div>}
         {focusNote && (
           <div className="focus-pill">
             Showing {focusCount} part{focusCount === 1 ? '' : 's'} from a note

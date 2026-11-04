@@ -4,14 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchScene } from '@/lib/scene';
 import { renderThumbnail } from '@/lib/thumbnail';
-import { BookOpen, History, ListChecks, Mic, Network, Plus, Slice } from 'lucide-react';
+import { BookOpen, History, ListChecks, Mic, Network, Plus } from 'lucide-react';
 import AddFilesDialog from './AddFilesDialog';
 import { Skeleton, SkeletonCards } from './Skeleton';
 import TopBar from './TopBar';
 
-const FEATURES = [
-  { href: '/section', label: 'Slice', hint: 'Cut through a machine', icon: Slice },
-];
 const KNOWLEDGE = [
   { href: '/knowledge/catalog', label: 'Catalog', hint: 'Look things up', icon: BookOpen },
   { href: '/knowledge/applicability', label: 'What applies?', hint: 'Answer a few questions', icon: ListChecks },
@@ -82,8 +79,6 @@ export default function Library() {
         <span className="topbar-note">{models ? `${models.length} file${models.length === 1 ? '' : 's'}` : ''}</span>
       </TopBar>
       <nav className="feature-row" aria-label="Tools">
-        {FEATURES.map((f) => <FeatureLink key={f.href} f={f} />)}
-        <span className="feature-sep" aria-hidden />
         <span className="feature-group">Knowledge</span>
         {KNOWLEDGE.map((f) => <FeatureLink key={f.href} f={f} />)}
       </nav>
@@ -104,10 +99,6 @@ export default function Library() {
               <div className="card-info">
                 <div className="card-name" title={m.path}>{m.path.split('/').pop()}</div>
                 <small>{(m.size / 1e6).toFixed(1)} MB · {m.path.split('/').slice(0, -1).join('/') || '/'}</small>
-                <div className="card-actions">
-                  <Link className="btn" href={`/viewer?model=${q}`}>Open</Link>
-                  <Link className="btn" href={`/naming?model=${q}`}>Name parts</Link>
-                </div>
               </div>
             </div>
           );

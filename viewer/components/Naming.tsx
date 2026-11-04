@@ -97,6 +97,29 @@ export default function Naming() {
     setIndex(Math.min(parts.length - 1, Math.max(0, i)));
   };
 
+  // Arrow keys step through the parts: left/up = previous, right/down = next. In the name field, left/right
+  // only step once the caret is at the start/end, so the text can still be edited with the arrows.
+  const step = useRef((_d: number) => {});
+  step.current = (d) => go(index + d);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
+      if (!d || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const t = e.target as HTMLElement;
+      if (t !== document.body && t !== inputRef.current) return; // leave the search box, dropdowns, etc. alone
+      if (t === inputRef.current && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const el = inputRef.current!;
+        const atEdge = el.selectionStart === el.selectionEnd && el.selectionStart === (d < 0 ? 0 : el.value.length);
+        if (!atEdge) return;
+      }
+      e.preventDefault();
+      step.current(d);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => { document.querySelector('.naming-item.sel')?.scrollIntoView({ block: 'nearest' }); }, [index]);
+
   return (
     <div className="naming">
       <TopBar actions={<span className="topbar-note">{parts.length ? `${named} / ${parts.length} named` : ''}</span>}>
@@ -132,7 +155,7 @@ export default function Naming() {
               <div className="naming-count">{index + 1} / {parts.length}</div>
             </div>
             <div className="naming-form">
-              <div className="naming-id">ID: <code>{current!.name}</code></div>
+              <div className="naming-id"><span>ID</span><code title={current!.name}>{current!.name}</code></div>
               <input
                 ref={inputRef}
                 value={draft}

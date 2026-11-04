@@ -87,9 +87,10 @@ canvas { display:block; width:100%; height:100%; }
 .naming-view { position:relative; flex:1; min-height:0; background:var(--canvas-bg2); }
 .naming-reset { position:absolute; top:10px; right:10px; padding:0 var(--s-2); }
 .naming-count { position:absolute; left:12px; bottom:10px; color:var(--dim); }
-.naming-form { padding:var(--s-4) var(--s-5) var(--s-4); background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; gap:var(--s-3); }
-.naming-id { color:var(--dim); }
-.naming-id code { color:var(--fg); }
+.naming-form { align-self:center; width:min(560px, calc(100% - 2 * var(--s-5))); margin:var(--s-4) 0 var(--s-5); padding:var(--s-4); background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--float-shadow); display:flex; flex-direction:column; gap:var(--s-2); }
+.naming-id { display:flex; align-items:baseline; gap:var(--s-2); color:var(--dim); font-size:12px; min-width:0; }
+.naming-id span { text-transform:uppercase; letter-spacing:.06em; font-size:11px; }
+.naming-id code { color:var(--fg); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .naming-form input { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:var(--radius); padding:var(--s-3) var(--s-3); font:inherit; font-size:16px; }
 .naming-form input:focus { outline:none; border-color:var(--accent); }
 .naming-arrow { position:absolute; top:50%; transform:translateY(-50%); width:44px; height:44px; border-radius:50%; font-size:22px; padding:0; text-align:center;
@@ -459,3 +460,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .swatches { display:flex; gap:var(--s-2); }
 .swatch { width:32px; height:32px; padding:0; border-radius:50%; display:inline-grid; place-items:center; border:2px solid var(--line); }
 .swatch[aria-checked="true"] { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+
+/* slice controls under the tool row */
+.slicebar { position:absolute; z-index:2; top:calc(var(--s-3) + 52px); left:calc(var(--left) + var(--s-5)); display:flex; align-items:center; gap:var(--s-3); width:fit-content; max-width:calc(100% - var(--left) - var(--right) - 2 * var(--s-5)); flex-wrap:wrap;
+  padding:var(--s-2) var(--s-3); background:color-mix(in srgb, var(--panel) 80%, transparent); border:1px solid var(--line); border-radius:var(--radius-lg); backdrop-filter:blur(14px) saturate(1.2); box-shadow:var(--float-shadow); }
+.slicebar input[type=range] { width:200px; accent-color:var(--accent); }
+.slicebar-pct { min-width:3.2em; font-variant-numeric:tabular-nums; color:var(--dim); }
+.slicebar .btn { padding:var(--s-1) var(--s-3); }
+.slicebar .segmented button { padding:var(--s-1) var(--s-3); }
+.status-top.below-slice { top:calc(var(--s-3) + 52px + 60px); }
+.toolrow .btn[aria-pressed="true"] { background:var(--accent-soft); border-color:var(--accent); }
+/* the arrows are centred with a transform; the global press effect must keep it */
+.naming-arrow:active:not(:disabled) { transform:translateY(-50%) scale(.95); }
