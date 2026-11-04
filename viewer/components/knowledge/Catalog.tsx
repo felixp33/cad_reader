@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KINDS, TOPICS, type Kind, type Topic } from '@/lib/knowledgeTypes';
 import { useMode } from '@/lib/mode';
 import { useKnowledge } from '@/lib/useKnowledge';
@@ -17,6 +17,7 @@ export default function Catalog() {
   const [topic, setTopic] = useState<Topic | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [form, setForm] = useState<'new' | 'edit' | null>(null);
+  useEffect(() => { setSelId(new URLSearchParams(location.search).get('id')); }, []); // linked from a reference panel
 
   const shown = useMemo(() => {
     const n = q.trim().toLowerCase();

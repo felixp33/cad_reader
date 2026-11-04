@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ExternalLink, FileText, X } from 'lucide-react';
+import { BookOpen, ExternalLink, FileText, X } from 'lucide-react';
 import type { KnowledgeItem } from '@/lib/knowledgeTypes';
 import { kindLabel } from '@/lib/knowledgeTypes';
 import { referenceFinder, type RefSpan } from '@/lib/references';
@@ -102,6 +102,10 @@ function ReferencePanel({ item, right, top, onClose }: { item: KnowledgeItem; ri
           <p className="kn-hint">No document has been provided for this entry yet.</p>
         </div>
       )}
+      <footer className="ref-foot">
+        {item.url && <a href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} aria-hidden /> Read the regulation</a>}
+        <a href={`/knowledge/catalog?id=${encodeURIComponent(item.id)}`} target="_blank" rel="noopener noreferrer"><BookOpen size={13} aria-hidden /> Open in the catalog</a>
+      </footer>
     </section>
   );
 }
