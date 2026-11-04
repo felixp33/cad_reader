@@ -18,13 +18,13 @@ export default function AskPanel({ model, selected, onClose }: { model: string; 
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const host = () => rootRef.current!.closest('main')!;
 
-  // Starts at the bottom-right of the 3D area, clear of the info column and the path bar.
+  // Starts at the bottom-right of the 3D area, clear of the info column.
   useEffect(() => {
     const { clientWidth: hw, clientHeight: hh } = host();
     const right = parseFloat(getComputedStyle(host()).getPropertyValue('--right')) || 0;
-    const w = Math.min(DEFAULT.w, hw - 24), h = Math.min(DEFAULT.h, hh - 120);
+    const w = Math.min(DEFAULT.w, hw - 24), h = Math.min(DEFAULT.h, hh - 88);
     setSize({ w, h });
-    setPos({ x: Math.max(0, hw - w - right - 24), y: Math.max(0, hh - h - 56) });
+    setPos({ x: Math.max(0, hw - w - right - 24), y: Math.max(0, hh - h - 24) });
   }, []);
 
   // Pointer-drag helper: calls onMove with the delta from where the drag started.

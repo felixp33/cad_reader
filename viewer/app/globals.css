@@ -522,3 +522,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline:none
 .kn-sec .kn-hint { margin:0; }
 .kn-count { color:var(--dim); font-size:11px; }
 .kn-none { margin:0; color:var(--dim); font-size:12px; font-style:italic; }
+.info-col > .info-card:not(.info-notes) { flex:none; } /* general information keeps its full height; the notes card gives way */
+.info-notes { min-height:200px; }
+.kn-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--s-3); }
+.kn-total { color:var(--dim); font-size:12px; white-space:nowrap; flex:none; }

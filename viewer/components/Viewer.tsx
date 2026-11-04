@@ -10,7 +10,7 @@ import { cssColor, subscribeTheme } from "@/lib/theme";
 import TopBar from "./TopBar";
 import Link from "next/link";
 import { Box, RotateCcw, Sparkles, Slice, Tag, X } from "lucide-react";
-import { fetchScene, findMachine, firstGeneration, pathTo, type Entry } from "@/lib/scene";
+import { fetchScene, firstGeneration, type Entry } from "@/lib/scene";
 import AskPanel from "./AskPanel";
 import IsolatedView from "./IsolatedView";
 import { applySlice, placePlane } from "@/lib/slice";
@@ -298,12 +298,6 @@ export default function Viewer() {
 	// Number of notes attached directly to a part, for the badge in the tree.
 	const noteCount = (e: Entry) => notes.filter((n) => n.parts.includes(e.name)).length;
 
-	// Breadcrumb "machine / part / component / …" for the current selection.
-	const machine = useMemo(() => (root ? findMachine([root]) : null), [root]);
-	const crumbs = useMemo(
-		() => (machine && selected ? (pathTo(machine, selected) ?? [machine]) : machine ? [machine] : []),
-		[machine, selected],
-	);
 
 	const clearSelection = () => {
 		selected?.group.traverse((o) => {
@@ -469,22 +463,6 @@ export default function Viewer() {
 							<X className="ic" size={16} />
 						</button>
 					</div>
-				)}
-				{crumbs.length > 0 && (
-					<nav className="crumbs" aria-label="Selected part path">
-						{crumbs.map((e, i) => (
-							<span key={i} className="crumb-wrap">
-								{i > 0 && <span className="crumb-sep">/</span>}
-								<button
-									className={`crumb${i === crumbs.length - 1 ? " current" : ""}`}
-									title={e.name}
-									onClick={() => (i === 0 ? clearSelection() : select(e))}
-								>
-									{i === 0 ? title || labelOf(e) : labelOf(e)}
-								</button>
-							</span>
-						))}
-					</nav>
 				)}
 				{isolated && <IsolatedView entry={isolated} title={labelOf(isolated)} onClose={() => setIsolated(null)} />}
 				{status && <div className={`status status-top${slicing ? " below-slice" : ""}`}>{status}</div>}

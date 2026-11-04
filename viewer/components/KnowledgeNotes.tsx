@@ -52,7 +52,8 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
 
   const partLabel = (id: string) => (id === MACHINE ? 'Whole machine' : byId.has(id) ? label(byId.get(id)!) : id);
 
-  const inheritedFrom = target === MACHINE ? [] : [MACHINE, ...(ancestors.get(target) ?? [])];
+  // Notes on a part assembly also apply to its parts; notes about the whole machine are not repeated for every part.
+  const inheritedFrom = target === MACHINE ? [] : ancestors.get(target) ?? [];
   const beingEdited = editing?.id ?? activeId; // shown in the form, so not repeated in the list
   const direct = notes.filter((n) => n.parts.includes(target));
   const inherited = notes.filter((n) => !n.parts.includes(target) && n.parts.some((p) => inheritedFrom.includes(p)));
@@ -74,7 +75,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
           {n.author ? <button className="author-link" onClick={() => setAuthorOpen(n.author)}>{n.author}</button> : 'Unknown'} · {new Date(n.updatedAt).toLocaleDateString()}
         </small>
         <span>
-          {notePartIds(n).length > 0 && (
+          {notePartIds(n).length > 1 && (
             focusNote === n.id
               ? <button className="show-parts on" onClick={() => onShowParts(null, [])}><Eye size={13} /> Show all</button>
               : <button className="show-parts" title="Show only the parts this note is about" onClick={() => onShowParts(n.id, notePartIds(n))}><ScanSearch size={13} /> Show parts</button>
@@ -98,8 +99,10 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
 
   if (readOnly) return (
     <section className="kn">
-      <h3>Knowledge <span>{report.length}</span></h3>
-      <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+      <div className="kn-head">
+        <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+        <span className="kn-total">{report.length} note{report.length === 1 ? '' : 's'}</span>
+      </div>
       {NOTE_TYPES.map((t) => {
         const items = report.filter((r) => r.note.types.includes(t.id));
         return (
@@ -116,8 +119,10 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
 
   return (
     <section className="kn">
-      <h3>Knowledge notes <span>{direct.length}</span></h3>
-      <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+      <div className="kn-head">
+        <div className="kn-target" title={target === MACHINE ? undefined : target}>{partLabel(target)}</div>
+        <span className="kn-total">{direct.length} note{direct.length === 1 ? '' : 's'}</span>
+      </div>
       <NoteForm
         key={editing?.id ?? `new-${target}-${draft}`}
         target={target}
@@ -128,7 +133,7 @@ export default function KnowledgeNotes({ notes, root, selected, label, names, on
         onDone={() => { setEditing(null); setActiveId(null); setDraft((d) => d + 1); }}
       />
       {direct.filter((n) => n.id !== beingEdited).map((n) => card(n))}
-      {inherited.length > 0 && <h4>From the machine / parent assemblies</h4>}
+      {inherited.length > 0 && <h4>From parent assemblies</h4>}
       {inherited.map((n) => card(n, partLabel(n.parts.find((p) => inheritedFrom.includes(p))!)))}
       {authorOpen && <AuthorPopup name={authorOpen} onClose={() => setAuthorOpen(null)} />}
     </section>
